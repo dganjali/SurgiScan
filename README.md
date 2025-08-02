@@ -1,138 +1,204 @@
-# Critical Object Confirmation System (Code Blue)
+# Surgical Instrument Tracking Dashboard
 
-A real-time emergency equipment verification system for Code Blue events in ER and ambulance settings, built with React Native for cross-platform deployment.
+A modern, real-time surgical instrument tracking system with a React frontend and Python Flask backend. Designed for operating room environments with a focus on sterility, accessibility, and quick visual feedback.
 
-## Features
+## 🏗️ Architecture
 
-- **Emergency Event Detection**: Manual trigger or sensor-based Code Blue activation
-- **Protocol Mapping**: Automatic mapping of required equipment for Code Blue events
-- **Real-Time Video Integration**: Live feed processing from ER/ambulance cameras
-- **Object Detection**: YOLOv8-based detection of critical medical equipment (OpenMV ready)
-- **Time-Based Alerts**: 30-second countdown with missing equipment alerts
-- **Post-Event Logging**: Comprehensive logging for compliance and improvement
-- **Cross-Platform**: Works on iOS, Android, and Web
+### Frontend (React)
+- **Left Panel (10%)**: Procedure overview and session information
+- **Center Panel (60%)**: Real-time visual feedback with live video feed
+- **Right Panel (30%)**: Smart checklist and validation system
 
-## Required Equipment for Code Blue
+### Backend (Python Flask)
+- RESTful API for instrument detection
+- YOLO-based object detection
+- Real-time data processing
+- Checklist management
 
-- AED (Automated External Defibrillator)
-- Crash Cart
-- Airway Bag
-- Oxygen Tank
-- Epinephrine Auto-injector
-
-## Quick Start
+## 🚀 Quick Start
 
 ### Prerequisites
 - Node.js (v16 or higher)
+- Python 3.8+
 - npm or yarn
-- Expo CLI (`npm install -g @expo/cli`)
 
-### Installation
-```bash
-# Install dependencies
-npm install
+### Frontend Setup
 
-# Start the development server
-npm start
+1. **Install dependencies:**
+   ```bash
+   npm install
+   ```
 
-# Run on web
-npm run web
+2. **Start the development server:**
+   ```bash
+   npm start
+   ```
 
-# Run on iOS (requires Xcode)
-npm run ios
+3. **Access the application:**
+   Open [http://localhost:3000](http://localhost:3000) in your browser
 
-# Run on Android (requires Android Studio)
-npm run android
-```
+### Backend Setup
 
-## Project Structure
+1. **Navigate to backend directory:**
+   ```bash
+   cd backend
+   ```
 
+2. **Create virtual environment:**
+   ```bash
+   python -m venv venv
+   source venv/bin/activate  # On Windows: venv\Scripts\activate
+   ```
+
+3. **Install dependencies:**
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+4. **Start the Flask server:**
+   ```bash
+   python app.py
+   ```
+
+5. **API will be available at:**
+   [http://localhost:5000](http://localhost:5000)
+
+## 🎯 Features
+
+### Left Panel - Procedure Overview
+- **Procedure Selection**: Dropdown with common surgical procedures
+- **Session Information**: Start time, patient ID (with privacy toggle)
+- **Expected Instruments**: Total count of required tools
+- **Privacy Mode**: Toggle to hide sensitive patient information
+
+### Center Panel - Real-Time Visual Feedback
+- **Live Video Feed**: Real-time camera input with object detection
+- **Overlay System**: 
+  - ✅ Green boxes for correctly identified instruments
+  - ❌ Red boxes for extra/unneeded items
+  - ⚠️ Yellow boxes for missing optional items
+  - 🔲 Empty outlines for missing required items
+- **Playback Controls**: Live/Frame-by-frame/Pause modes
+- **Timeline Slider**: Navigate through recorded frames
+- **Snapshot Capture**: Take still images for review
+
+### Right Panel - Smart Checklist & Validation
+- **Instrument Checklist**: 
+  - Collapsible tool groups
+  - Real-time status updates
+  - Count tracking (found/required)
+- **Issues Log**: 
+  - Real-time system observations
+  - Timestamped entries
+  - Color-coded by issue type
+- **Action Buttons**:
+  - 🟢 "Confirm Setup" - Validate current configuration
+  - 🔄 "Re-Scan" - Trigger new detection cycle
+
+## 🎨 Design Principles
+
+### Sterility & Security
+- **No Popups/Modals**: Prevents contamination risks
+- **No Typing Required**: Touch-friendly interface
+- **Colorblind-Safe**: All feedback uses accessible color schemes
+- **AORN Standards**: Tool naming follows medical standards
+
+### Responsive Design
+- **Tablet Optimized**: Primary target for OR wall-mounted screens
+- **Large Fonts**: Readable from across the room
+- **Clear Iconography**: Intuitive visual feedback
+- **Minimal Colors**: Blues/greys/greens for professional appearance
+
+## 🔧 API Endpoints
+
+### Procedures
+- `GET /api/procedures` - List available procedures
+- `GET /api/procedure/<name>` - Get procedure details
+
+### Detection
+- `POST /api/detect` - Process image/video for instrument detection
+- `GET /api/status` - Get system status
+
+### Checklist
+- `GET /api/checklist` - Get current checklist status
+- `POST /api/checklist/confirm` - Confirm current setup
+- `POST /api/rescan` - Trigger new detection cycle
+
+## 🛠️ Development
+
+### Frontend Structure
 ```
 src/
-├── screens/           # Main application screens
-│   ├── DashboardScreen.js
-│   ├── EmergencyScreen.js
-│   ├── LogsScreen.js
-│   └── SettingsScreen.js
-├── services/          # Business logic services
-│   ├── objectDetectionService.js
-│   └── loggingService.js
-└── utils/            # Utility functions
-    └── emergencyProtocols.js
+├── components/
+│   ├── LeftPanel.js      # Procedure overview
+│   ├── CenterPanel.js    # Video feed and controls
+│   └── RightPanel.js     # Checklist and validation
+├── styles/
+│   └── GlobalStyles.js   # Global styling
+└── App.js               # Main application
 ```
 
-## Architecture
+### Backend Structure
+```
+backend/
+├── app.py              # Flask application
+├── requirements.txt    # Python dependencies
+└── models/            # ML models (if needed)
+```
 
-- **Frontend**: React Native with Expo for cross-platform development
-- **UI Framework**: React Native Paper for Material Design components
-- **Navigation**: React Navigation for screen management
-- **Computer Vision**: OpenMV integration ready for object detection
-- **Database**: SQLite for local data storage
-- **Audio**: Expo AV for alert sounds
-- **Camera**: Expo Camera for video feed integration
+## 🧪 Testing
 
-## OpenMV Integration
-
-The system is designed to integrate with OpenMV for real-time object detection:
-
-1. **Object Detection Service**: Handles communication with OpenMV device
-2. **Detection Keywords**: Configurable keywords for equipment recognition
-3. **Confidence Scoring**: Adjustable confidence thresholds
-4. **Real-time Processing**: Continuous monitoring during emergencies
-
-## Emergency Protocols
-
-The system supports multiple emergency types:
-- **Code Blue**: Cardiac arrest (primary focus)
-- **Code Red**: Fire emergency
-- **Code Pink**: Infant/Child abduction
-
-Each protocol has configurable equipment requirements and timeouts.
-
-## Development
-
-### Adding New Emergency Types
-1. Update `src/utils/emergencyProtocols.js`
-2. Add equipment definitions with detection keywords
-3. Configure timeout and location settings
-
-### Customizing Object Detection
-1. Modify `src/services/objectDetectionService.js`
-2. Implement OpenMV WebSocket connection
-3. Configure detection parameters
-
-### Database Schema
-The system uses SQLite with three main tables:
-- `emergency_events`: Logs of emergency events
-- `equipment_detections`: Individual equipment detections
-- `system_logs`: System-level logging
-
-## Deployment
-
-### Web Deployment
+### Frontend Testing
 ```bash
-npm run web
-# Deploy to hosting service (Netlify, Vercel, etc.)
+npm test
 ```
 
-### Mobile Deployment
+### Backend Testing
 ```bash
-# Build for production
-expo build:android
-expo build:ios
-
-# Or use EAS Build
-eas build --platform all
+cd backend
+python -m pytest
 ```
 
-## Contributing
+## 🚀 Deployment
+
+### Frontend Build
+```bash
+npm run build
+```
+
+### Backend Deployment
+```bash
+cd backend
+gunicorn app:app
+```
+
+## 📋 Environment Variables
+
+Create a `.env` file in the backend directory:
+
+```env
+FLASK_ENV=development
+FLASK_DEBUG=1
+MODEL_PATH=./models/yolov8n.pt
+CAMERA_INDEX=0
+```
+
+## 🤝 Contributing
 
 1. Fork the repository
 2. Create a feature branch
 3. Make your changes
-4. Test thoroughly
+4. Add tests if applicable
 5. Submit a pull request
 
-## License
+## 📄 License
 
-This project is licensed under the MIT License.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 🆘 Support
+
+For support or questions, please open an issue in the GitHub repository.
+
+---
+
+**Note**: This is a development version. For production use in medical environments, additional validation, testing, and regulatory compliance measures are required.
