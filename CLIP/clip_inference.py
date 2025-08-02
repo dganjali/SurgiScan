@@ -20,8 +20,13 @@ def load_trained_model(model_path, metadata_path, device):
     
     return model, preprocess, tokenizer, metadata
 
-def classify_image(image_path, model, preprocess, metadata, device):
+def classify_image(image_path, model, preprocess, metadata, device, tokenizer=None):
     """Classify a single image"""
+    # Create tokenizer if not provided
+    if tokenizer is None:
+        import open_clip
+        tokenizer = open_clip.get_tokenizer("ViT-B-32")
+    
     # Load and preprocess image
     image = Image.open(image_path).convert('RGB')
     image_input = preprocess(image).unsqueeze(0).to(device)

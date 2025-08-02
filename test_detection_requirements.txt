@@ -1,0 +1,5 @@
+# Requirements for object detection test
+torch
+torchvision
+detectron2 -f https://dl.fbaipublicfiles.com/detectron2/wheels/cu121/torch2.1/index.html
+opencv-python

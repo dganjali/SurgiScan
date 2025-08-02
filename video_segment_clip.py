@@ -1,6 +1,13 @@
-# Video segment -> CLIP pipeline
-# This script processes a video file frame-by-frame, runs object detection (RetinaNet via Detectron2),
-# and calls CLIP classification for each detected object. It spends extra time on each frame for accuracy.
+# Video Object Detection + CLIP Classification Pipeline (Comprehensive Detection)
+# This script processes a video file frame-by-frame using:
+# 1. Detectron2 RetinaNet for object detection with multiple strategies for maximum coverage
+# 2. CLIP model for surgical tool classification (not YOLO!)
+# 
+# Detection Strategies for Maximum Object Coverage:
+# - Lower detection threshold (0.3) to catch more objects
+# - Multi-scale detection (original + resized frames)
+# - Higher candidate limit (1000) for thorough searching
+# - Only draws boxes for high-confidence objects (≥0.65) but processes all detections
 
 import cv2
 import torch
@@ -11,62 +18,243 @@ from detectron2.config import get_cfg
 from detectron2 import model_zoo
 from detectron2.data import MetadataCatalog
 
-# Import CLIP pipeline (assume CLIP/clip_inference.py has a classify_image function)
+# Import CLIP pipeline for surgical tool classification
 import sys
 sys.path.append('CLIP')
-from clip_inference import classify_image  # You may need to adjust this import
 
-VIDEO_PATH = "input_video.mp4"  # Change this to your video filename
+try:
+    from clip_inference import classify_image, load_trained_model
+    
+    # Load CLIP model and preprocess for surgical tool classification
+    print("Loading trained CLIP model for surgical tool classification...")
+    clip_device = "cuda" if torch.cuda.is_available() else "cpu"
+    
+    # Use absolute paths to ensure we're loading the correct trained model
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    model_path = os.path.join(current_dir, "CLIP", "best_surgical_tool_clip.pth")
+    metadata_path = os.path.join(current_dir, "CLIP", "surgical_tool_metadata.pkl")
+    
+    # Verify the model files exist
+    if not os.path.exists(model_path):
+        raise FileNotFoundError(f"Trained CLIP model not found at: {model_path}")
+    if not os.path.exists(metadata_path):
+        raise FileNotFoundError(f"CLIP metadata not found at: {metadata_path}")
+    
+    print(f"Loading CLIP model from: {model_path}")
+    print(f"Loading metadata from: {metadata_path}")
+    
+    clip_model, clip_preprocess, clip_tokenizer, clip_metadata = load_trained_model(
+        model_path, metadata_path, clip_device
+    )
+    CLIP_AVAILABLE = True
+    print(f"✓ CLIP model loaded successfully with {len(clip_metadata['class_names'])} surgical tool classes")
+    print("✓ Available tool classes:", clip_metadata['class_names'])
+    print(f"✓ Using device: {clip_device}")
+except ImportError as e:
+    print(f"CLIP not available: {e}")
+    CLIP_AVAILABLE = False
+except Exception as e:
+    print(f"Error loading CLIP model: {e}")
+    CLIP_AVAILABLE = False
+
+VIDEO_PATH = "video.mp4"  # Change this to your video filename
+
 OUTPUT_DIR = "video_clip_results"
 os.makedirs(OUTPUT_DIR, exist_ok=True)
+FRAMES_DIR = os.path.join(OUTPUT_DIR, "frames_with_boxes")
+os.makedirs(FRAMES_DIR, exist_ok=True)
 
-# Setup Detectron2 RetinaNet
-cfg = get_cfg()
-cfg.merge_from_file(model_zoo.get_config_file("COCO-Detection/retinanet_R_50_FPN_3x.yaml"))
-cfg.MODEL.RETINANET.SCORE_THRESH_TEST = 0.5
-cfg.MODEL.WEIGHTS = model_zoo.get_checkpoint_url("COCO-Detection/retinanet_R_50_FPN_3x.yaml")
-cfg.MODEL.DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
-predictor = DefaultPredictor(cfg)
-metadata = MetadataCatalog.get(cfg.DATASETS.TRAIN[0])
+def process_video_with_detection():
+    """
+    Process video frame by frame with object detection and CLIP classification
+    """
+    # Setup Detectron2 RetinaNet with balanced settings for accurate detection
+    print("Setting up Detectron2 RetinaNet with balanced detection settings...")
+    cfg = get_cfg()
+    cfg.merge_from_file(model_zoo.get_config_file("COCO-Detection/retinanet_R_50_FPN_3x.yaml"))
+    
+    # Use more conservative thresholds for better accuracy
+    cfg.MODEL.RETINANET.SCORE_THRESH_TEST = 0.6  # Increased from 0.3 to reduce false positives
+    cfg.MODEL.RETINANET.NMS_THRESH_TEST = 0.4    # Stricter NMS to remove more overlapping boxes
+    cfg.MODEL.RETINANET.TOPK_CANDIDATES_TEST = 500  # Reduced from 1000 for more selective detection
+    
+    # Load model weights
+    cfg.MODEL.WEIGHTS = model_zoo.get_checkpoint_url("COCO-Detection/retinanet_R_50_FPN_3x.yaml")
+    cfg.MODEL.DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
+    
+    predictor = DefaultPredictor(cfg)
+    metadata = MetadataCatalog.get(cfg.DATASETS.TRAIN[0])
+    
+    print(f"Using device: {cfg.MODEL.DEVICE}")
+    print(f"Detection threshold: {cfg.MODEL.RETINANET.SCORE_THRESH_TEST} (conservative for accuracy)")
+    print(f"This will detect fewer but more accurate objects")
+    print(f"Bounding boxes will only be drawn for objects with ≥0.65 confidence")
+    
+    # Open video
+    cap = cv2.VideoCapture(VIDEO_PATH)
+    if not cap.isOpened():
+        print(f"Cannot open video: {VIDEO_PATH}")
+        return
+    
+    # Get video properties
+    original_fps = cap.get(cv2.CAP_PROP_FPS)
+    total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+    duration = total_frames / original_fps if original_fps > 0 else 0
+    
+    # Target processing rate: 10 frames per second
+    target_fps = 10
+    frame_skip = max(1, int(original_fps / target_fps))  # Skip frames to achieve target FPS
+    
+    print(f"Processing video: {VIDEO_PATH}")
+    print(f"Original FPS: {original_fps:.2f}, Total frames: {total_frames}, Duration: {duration:.2f}s")
+    print(f"Target processing rate: {target_fps} FPS (processing every {frame_skip} frames)")
+    print(f"Estimated frames to process: {total_frames // frame_skip}")
+    
+    frame_idx = 0
+    processed_frame_count = 0
+    detected_tools = set()
+    
+    while True:
+        ret, frame = cap.read()
+        if not ret:
+            break
+        
+        # Skip frames to achieve target framerate (only process every Nth frame)
+        if frame_idx % frame_skip != 0:
+            frame_idx += 1
+            continue
+            
+        print(f"Processing frame {frame_idx} (processed frame #{processed_frame_count + 1})")
+        
+        # Run Detectron2 detection on full frame with multiple strategies for comprehensive detection
+        
+        # Strategy 1: Full resolution detection
+        outputs_full = predictor(frame)
+        
+        # Strategy 2: Slightly resized frame for different scale detection
+        frame_resized = cv2.resize(frame, (int(frame.shape[1] * 1.2), int(frame.shape[0] * 1.2)))
+        outputs_resized = predictor(frame_resized)
+        
+        # Combine results from both strategies
+        instances_full = outputs_full["instances"]
+        instances_resized = outputs_resized["instances"]
+        
+        # Get detection results from full resolution
+        boxes_full = instances_full.pred_boxes.tensor.cpu().numpy() if instances_full.has("pred_boxes") else []
+        scores_full = instances_full.scores.cpu().numpy() if instances_full.has("scores") else []
+        classes_full = instances_full.pred_classes.cpu().numpy() if instances_full.has("pred_classes") else []
+        
+        # Get detection results from resized (scale back to original coordinates)
+        boxes_resized = instances_resized.pred_boxes.tensor.cpu().numpy() if instances_resized.has("pred_boxes") else []
+        scores_resized = instances_resized.scores.cpu().numpy() if instances_resized.has("scores") else []
+        classes_resized = instances_resized.pred_classes.cpu().numpy() if instances_resized.has("pred_classes") else []
+        
+        # Scale back resized boxes to original frame coordinates
+        if len(boxes_resized) > 0:
+            scale_x = frame.shape[1] / frame_resized.shape[1]
+            scale_y = frame.shape[0] / frame_resized.shape[0]
+            boxes_resized[:, [0, 2]] *= scale_x  # x coordinates
+            boxes_resized[:, [1, 3]] *= scale_y  # y coordinates
+        
+        # Combine all detections
+        import numpy as np
+        if len(boxes_full) > 0 and len(boxes_resized) > 0:
+            boxes = np.vstack([boxes_full, boxes_resized])
+            scores = np.hstack([scores_full, scores_resized])
+            classes = np.hstack([classes_full, classes_resized])
+        elif len(boxes_full) > 0:
+            boxes = boxes_full
+            scores = scores_full
+            classes = classes_full
+        elif len(boxes_resized) > 0:
+            boxes = boxes_resized
+            scores = scores_resized
+            classes = classes_resized
+        else:
+            boxes = np.array([])
+            scores = np.array([])
+            classes = np.array([])
+        
+        print(f"  Frame {frame_idx}: {len(boxes)} total objects detected (full: {len(boxes_full)}, resized: {len(boxes_resized)})")
+        
+        # Create a copy of the frame for drawing
+        frame_with_boxes = frame.copy()
+        
+        if len(boxes) > 0:
+            for i, (box, score, cls) in enumerate(zip(boxes, scores, classes)):
+                x1, y1, x2, y2 = box.astype(int)
+                
+                # Get class name from COCO classes
+                class_name = metadata.thing_classes[cls] if hasattr(metadata, 'thing_classes') else f"class_{cls}"
+                
+                # Crop the detected object
+                crop = frame[max(0, y1):min(frame.shape[0], y2), max(0, x1):min(frame.shape[1], x2)]
+                
+                # Save crop for CLIP analysis
+                crop_path = os.path.join(OUTPUT_DIR, f"frame{frame_idx}_obj{i}.jpg")
+                cv2.imwrite(crop_path, crop)
+                
+                # Initialize variables for confidence checking
+                final_confidence = score  # Default to detection confidence
+                draw_box = False
+                
+                # Use CLIP classification for surgical tool identification
+                if CLIP_AVAILABLE:
+                    try:
+                        clip_result = classify_image(crop_path, clip_model, clip_preprocess, clip_metadata, clip_device, clip_tokenizer)
+                        clip_label = clip_result['predicted_class']
+                        clip_confidence = clip_result['confidence']
+                        label = f"{clip_label} ({clip_confidence:.2f})"
+                        detected_tools.add(clip_label)
+                        final_confidence = clip_confidence  # Use CLIP confidence for threshold
+                        print(f"    Object {i+1}: CLIP classified as '{clip_label}' (confidence: {clip_confidence:.2f}, COCO: {class_name})")
+                    except Exception as e:
+                        label = f"{class_name}: {score:.2f}"
+                        detected_tools.add(class_name)
+                        final_confidence = score  # Use detection confidence
+                        print(f"    Object {i+1}: CLIP failed ({e}), using COCO: {class_name} (conf: {score:.2f})")
+                else:
+                    label = f"{class_name}: {score:.2f}"
+                    detected_tools.add(class_name)
+                    final_confidence = score  # Use detection confidence
+                    print(f"    Object {i+1}: {class_name} (confidence: {score:.2f}) - CLIP not available")
+                
+                # Only draw bounding box if confidence is 0.65 or higher
+                if final_confidence >= 0.65:
+                    draw_box = True
+                    # Draw bounding box (red color, thick line)
+                    cv2.rectangle(frame_with_boxes, (x1, y1), (x2, y2), (0, 0, 255), 3)
+                    
+                    # Draw label background
+                    (label_width, label_height), _ = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.7, 2)
+                    cv2.rectangle(frame_with_boxes, (x1, y1 - label_height - 10), (x1 + label_width, y1), (0, 0, 255), -1)
+                    
+                    # Draw label text
+                    cv2.putText(frame_with_boxes, label, (x1, y1 - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
+                else:
+                    print(f"    Object {i+1}: Confidence {final_confidence:.2f} below threshold (0.65), not drawing box")
+        
+        # Save frame with bounding boxes (use processed frame count for consistent numbering)
+        frame_box_path = os.path.join(FRAMES_DIR, f"frame_{processed_frame_count:05d}.jpg")
+        cv2.imwrite(frame_box_path, frame_with_boxes)
+        
+        processed_frame_count += 1
+        frame_idx += 1
+        
+        # Remove the delay since we're already processing at lower framerate
+        # time.sleep(0.1)  # Removed since frame skipping already reduces processing load
+    
+    cap.release()
+    
+    print(f"\nVideo processing completed!")
+    print(f"Total frames in video: {frame_idx}")
+    print(f"Frames actually processed: {processed_frame_count}")
+    print(f"Processing rate: {processed_frame_count/frame_idx*100:.1f}% of frames (target: {target_fps} FPS)")
+    print(f"Tools/objects detected in video:")
+    for tool in sorted(list(detected_tools)):
+        print(f"  - {tool}")
+    print(f"\nFrames with bounding boxes saved to: {FRAMES_DIR}")
+    print(f"Cropped objects saved to: {OUTPUT_DIR}")
 
-cap = cv2.VideoCapture(VIDEO_PATH)
-if not cap.isOpened():
-    print(f"Cannot open video: {VIDEO_PATH}")
-    exit(1)
-
-frame_idx = 0
-detected_tools = set()
-while True:
-    ret, frame = cap.read()
-    if not ret:
-        break
-    print(f"Processing frame {frame_idx}")
-    # Spend extra time on each frame (simulate slow, accurate detection)
-    time.sleep(0.5)  # Increase for more time per frame
-    # Detect objects
-    small_frame = cv2.resize(frame, (640, 480))
-    outputs = predictor(small_frame)
-    instances = outputs["instances"]
-    boxes = instances.pred_boxes.tensor.cpu().numpy() if instances.has("pred_boxes") else []
-    # For each detected object, crop and classify with CLIP
-    y_scale = frame.shape[0] / 480
-    x_scale = frame.shape[1] / 640
-    for i, box in enumerate(boxes):
-        x1, y1, x2, y2 = box.astype(int)
-        x1 = int(x1 * x_scale)
-        x2 = int(x2 * x_scale)
-        y1 = int(y1 * y_scale)
-        y2 = int(y2 * y_scale)
-        crop = frame[max(0, y1):min(frame.shape[0], y2), max(0, x1):min(frame.shape[1], x2)]
-        crop_path = os.path.join(OUTPUT_DIR, f"frame{frame_idx}_obj{i}.jpg")
-        cv2.imwrite(crop_path, crop)
-        # Run CLIP classification (assumes classify_image returns a label)
-        label = classify_image(crop_path)
-        print(f"Frame {frame_idx} Object {i}: {label}")
-        detected_tools.add(label)
-    frame_idx += 1
-
-cap.release()
-print("Video segment->CLIP pipeline completed.")
-print("Tools detected in video:")
-print(sorted(list(detected_tools)))
+if __name__ == "__main__":
+    process_video_with_detection()

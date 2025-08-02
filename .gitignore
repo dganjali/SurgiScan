@@ -9,6 +9,8 @@ build/
 dist/
 CLIP/best_surgical_tool_clip.pth
 # Environment variables
+video_clip_results/
+
 .env
 .env.local
 .env.development.local
