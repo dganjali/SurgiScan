@@ -126,56 +126,16 @@ def process_video_with_detection():
             
         print(f"Processing frame {frame_idx} (processed frame #{processed_frame_count + 1})")
         
-        # Run Detectron2 detection on full frame with multiple strategies for comprehensive detection
+        # Run Detectron2 detection on full frame (single strategy for cleaner results)
+        outputs = predictor(frame)
+        instances = outputs["instances"]
         
-        # Strategy 1: Full resolution detection
-        outputs_full = predictor(frame)
+        # Get detection results
+        boxes = instances.pred_boxes.tensor.cpu().numpy() if instances.has("pred_boxes") else []
+        scores = instances.scores.cpu().numpy() if instances.has("scores") else []
+        classes = instances.pred_classes.cpu().numpy() if instances.has("pred_classes") else []
         
-        # Strategy 2: Slightly resized frame for different scale detection
-        frame_resized = cv2.resize(frame, (int(frame.shape[1] * 1.2), int(frame.shape[0] * 1.2)))
-        outputs_resized = predictor(frame_resized)
-        
-        # Combine results from both strategies
-        instances_full = outputs_full["instances"]
-        instances_resized = outputs_resized["instances"]
-        
-        # Get detection results from full resolution
-        boxes_full = instances_full.pred_boxes.tensor.cpu().numpy() if instances_full.has("pred_boxes") else []
-        scores_full = instances_full.scores.cpu().numpy() if instances_full.has("scores") else []
-        classes_full = instances_full.pred_classes.cpu().numpy() if instances_full.has("pred_classes") else []
-        
-        # Get detection results from resized (scale back to original coordinates)
-        boxes_resized = instances_resized.pred_boxes.tensor.cpu().numpy() if instances_resized.has("pred_boxes") else []
-        scores_resized = instances_resized.scores.cpu().numpy() if instances_resized.has("scores") else []
-        classes_resized = instances_resized.pred_classes.cpu().numpy() if instances_resized.has("pred_classes") else []
-        
-        # Scale back resized boxes to original frame coordinates
-        if len(boxes_resized) > 0:
-            scale_x = frame.shape[1] / frame_resized.shape[1]
-            scale_y = frame.shape[0] / frame_resized.shape[0]
-            boxes_resized[:, [0, 2]] *= scale_x  # x coordinates
-            boxes_resized[:, [1, 3]] *= scale_y  # y coordinates
-        
-        # Combine all detections
-        import numpy as np
-        if len(boxes_full) > 0 and len(boxes_resized) > 0:
-            boxes = np.vstack([boxes_full, boxes_resized])
-            scores = np.hstack([scores_full, scores_resized])
-            classes = np.hstack([classes_full, classes_resized])
-        elif len(boxes_full) > 0:
-            boxes = boxes_full
-            scores = scores_full
-            classes = classes_full
-        elif len(boxes_resized) > 0:
-            boxes = boxes_resized
-            scores = scores_resized
-            classes = classes_resized
-        else:
-            boxes = np.array([])
-            scores = np.array([])
-            classes = np.array([])
-        
-        print(f"  Frame {frame_idx}: {len(boxes)} total objects detected (full: {len(boxes_full)}, resized: {len(boxes_resized)})")
+        print(f"  Frame {frame_idx}: {len(boxes)} objects detected")
         
         # Create a copy of the frame for drawing
         frame_with_boxes = frame.copy()
