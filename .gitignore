@@ -7,7 +7,7 @@ tool_images/
 # Production builds
 build/
 dist/
-
+CLIP/best_surgical_tool_clip.pth
 # Environment variables
 .env
 .env.local

@@ -5,7 +5,7 @@ import torch.optim as optim
 from torch.utils.data import Dataset, DataLoader
 from torchvision import transforms
 from PIL import Image
-import clip
+import open_clip
 import json
 from tqdm import tqdm
 import numpy as np
@@ -85,8 +85,9 @@ def train_clip_model(model, train_loader, val_loader, device, num_epochs=10, lea
             image_features = model.encode_image(images)
             
             # Create text features for all classes
-            text_inputs = torch.cat([clip.tokenize(f"a photo of a {class_name}") for class_name in class_names]).to(device)
-            text_features = model.encode_text(text_inputs)
+            text_inputs = [f"a photo of a {class_name}" for class_name in class_names]
+            text_tokens = tokenizer(text_inputs).to(device)
+            text_features = model.encode_text(text_tokens)
             
             # Normalize features
             image_features = image_features / image_features.norm(dim=-1, keepdim=True)
@@ -114,8 +115,9 @@ def train_clip_model(model, train_loader, val_loader, device, num_epochs=10, lea
                 images, labels = images.to(device), labels.to(device)
                 
                 image_features = model.encode_image(images)
-                text_inputs = torch.cat([clip.tokenize(f"a photo of a {class_name}") for class_name in class_names]).to(device)
-                text_features = model.encode_text(text_inputs)
+                text_inputs = [f"a photo of a {class_name}" for class_name in class_names]
+                text_tokens = tokenizer(text_inputs).to(device)
+                text_features = model.encode_text(text_tokens)
                 
                 image_features = image_features / image_features.norm(dim=-1, keepdim=True)
                 text_features = text_features / text_features.norm(dim=-1, keepdim=True)
@@ -151,7 +153,8 @@ def main():
     
     # Load CLIP model
     print("Loading CLIP model...")
-    model, preprocess = clip.load("ViT-B/32", device=device)
+    model, _, preprocess = open_clip.create_model_and_transforms("ViT-B-32", pretrained="openai", device=device)
+    tokenizer = open_clip.get_tokenizer("ViT-B-32")
     
     # Load dataset
     print("Loading dataset...")

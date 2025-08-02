@@ -1,6 +1,6 @@
-torch
-torchvision
-clip-by-openai
+torch==2.7.1
+torchvision==0.22.1
+open_clip_torch
 Pillow
 tqdm
 scikit-learn

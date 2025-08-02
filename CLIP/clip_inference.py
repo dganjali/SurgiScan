@@ -1,5 +1,5 @@
 import torch
-import clip
+import open_clip
 from PIL import Image
 import pickle
 import os
@@ -7,7 +7,8 @@ import os
 def load_trained_model(model_path, metadata_path, device):
     """Load the trained CLIP model and metadata"""
     # Load CLIP model
-    model, preprocess = clip.load("ViT-B/32", device=device)
+    model, _, preprocess = open_clip.create_model_and_transforms("ViT-B-32", pretrained="openai", device=device)
+    tokenizer = open_clip.get_tokenizer("ViT-B-32")
     
     # Load trained weights
     model.load_state_dict(torch.load(model_path, map_location=device))
@@ -17,7 +18,7 @@ def load_trained_model(model_path, metadata_path, device):
     with open(metadata_path, 'rb') as f:
         metadata = pickle.load(f)
     
-    return model, preprocess, metadata
+    return model, preprocess, tokenizer, metadata
 
 def classify_image(image_path, model, preprocess, metadata, device):
     """Classify a single image"""
@@ -31,8 +32,9 @@ def classify_image(image_path, model, preprocess, metadata, device):
         
         # Create text features for all classes
         class_names = metadata['class_names']
-        text_inputs = torch.cat([clip.tokenize(f"a photo of a {class_name}") for class_name in class_names]).to(device)
-        text_features = model.encode_text(text_inputs)
+        text_inputs = [f"a photo of a {class_name}" for class_name in class_names]
+        text_tokens = tokenizer(text_inputs).to(device)
+        text_features = model.encode_text(text_tokens)
         
         # Normalize features
         image_features = image_features / image_features.norm(dim=-1, keepdim=True)
@@ -70,7 +72,7 @@ def main():
         return
     
     print("Loading trained model...")
-    model, preprocess, metadata = load_trained_model(model_path, metadata_path, device)
+    model, preprocess, tokenizer, metadata = load_trained_model(model_path, metadata_path, device)
     
     print(f"Loaded model with {len(metadata['class_names'])} classes:")
     for i, class_name in enumerate(metadata['class_names']):
