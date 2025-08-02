@@ -1,6 +1,7 @@
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, FileResponse
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from typing import List
 import shutil
 import os
@@ -20,6 +21,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Mount static files for serving images
+app.mount("/images", StaticFiles(directory="temp_images"), name="images")
 
 # Initialize services
 segmentation_service = SegmentationService()
@@ -81,11 +85,11 @@ def upload_images(session_id: str = Form(...), files: List[UploadFile] = File(..
             
             # Segment objects from the image
             crop_dir = f"{upload_dir}/cropped"
-            cropped_paths = segmentation_service.segment_image(file_path, crop_dir)
+            segmentation_result = segmentation_service.segment_image(file_path, crop_dir)
             
-            if cropped_paths:
+            if segmentation_result['cropped_paths']:
                 # Classify each cropped object with CLIP
-                classification_results = clip_service.classify_multiple_images(cropped_paths)
+                classification_results = clip_service.classify_multiple_images(segmentation_result['cropped_paths'])
                 
                 # Aggregate tool counts
                 for tool, count in classification_results['tool_counts'].items():
@@ -93,8 +97,10 @@ def upload_images(session_id: str = Form(...), files: List[UploadFile] = File(..
                 
                 processed_images.append({
                     "filename": file.filename,
-                    "objects_detected": len(cropped_paths),
-                    "tool_counts": classification_results['tool_counts']
+                    "objects_detected": segmentation_result['total_objects'],
+                    "tool_counts": classification_results['tool_counts'],
+                    "bounding_boxes": segmentation_result['bounding_boxes'],
+                    "annotated_image_path": segmentation_result['annotated_image_path']
                 })
         
         # Update session with detected tools
@@ -258,10 +264,10 @@ def realtime_validate(session_id: str = Form(...), image: UploadFile = File(...)
         
         # Quick segmentation and classification
         crop_dir = f"{temp_dir}/cropped"
-        cropped_paths = segmentation_service.segment_image(temp_path, crop_dir)
+        segmentation_result = segmentation_service.segment_image(temp_path, crop_dir)
         
-        if cropped_paths:
-            results = clip_service.classify_multiple_images(cropped_paths)
+        if segmentation_result['cropped_paths']:
+            results = clip_service.classify_multiple_images(segmentation_result['cropped_paths'])
             detected_tools = results['tool_counts']
         else:
             detected_tools = {}
@@ -270,16 +276,21 @@ def realtime_validate(session_id: str = Form(...), image: UploadFile = File(...)
         required_tools = sessions[session_id]["required_tools"]
         missing = [tool for tool in required_tools if tool.lower() not in [d.lower() for d in detected_tools.keys()]]
         
-        # Clean up temp files
+        # Return the annotated image path for display (don't clean up)
+        annotated_image_url = f"/images/{session_id}/cropped/annotated_image.jpg"
+        
+        # Clean up only the original temp file and cropped images
         os.remove(temp_path)
-        for crop_path in cropped_paths:
+        for crop_path in segmentation_result['cropped_paths']:
             if os.path.exists(crop_path):
                 os.remove(crop_path)
         
         return {
             "detected_tools": detected_tools,
             "missing_tools": missing,
-            "objects_found": len(cropped_paths),
+            "objects_found": segmentation_result['total_objects'],
+            "bounding_boxes": segmentation_result['bounding_boxes'],
+            "annotated_image_url": annotated_image_url,
             "timestamp": datetime.now().isoformat()
         }
         

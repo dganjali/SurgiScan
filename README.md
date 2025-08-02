@@ -1,113 +1,125 @@
-# Surgical Instrument Tracking Dashboard
+# 🏥 Medical Crash Cart Validator
 
-A modern, real-time surgical instrument tracking system with a React frontend and Python Flask backend. Designed for operating room environments with a focus on sterility, accessibility, and quick visual feedback.
-
-## 🏗️ Architecture
-
-### Frontend (React)
-- **Left Panel (10%)**: Procedure overview and session information
-- **Center Panel (60%)**: Real-time visual feedback with live video feed
-- **Right Panel (30%)**: Smart checklist and validation system
-
-### Backend (Python Flask)
-- RESTful API for instrument detection
-- YOLO-based object detection
-- Real-time data processing
-- Checklist management
-
-## 🚀 Quick Start
-
-### Prerequisites
-- Node.js (v16 or higher)
-- Python 3.8+
-- npm or yarn
-
-### Frontend Setup
-
-1. **Install dependencies:**
-   ```bash
-   npm install
-   ```
-
-2. **Start the development server:**
-   ```bash
-   npm start
-   ```
-
-3. **Access the application:**
-   Open [http://localhost:3000](http://localhost:3000) in your browser
-
-### Backend Setup
-
-1. **Navigate to backend directory:**
-   ```bash
-   cd backend
-   ```
-
-2. **Create virtual environment:**
-   ```bash
-   python -m venv venv
-   source venv/bin/activate  # On Windows: venv\Scripts\activate
-   ```
-
-3. **Install dependencies:**
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-4. **Start the Flask server:**
-   ```bash
-   python app.py
-   ```
-
-5. **API will be available at:**
-   [http://localhost:5000](http://localhost:5000)
+Real-time computer vision system for validating surgical tool inventory in medical crash carts using YOLO segmentation, trained CLIP classification, and MCP protocol scraping.
 
 ## 🎯 Features
 
-### Left Panel - Procedure Overview
-- **Procedure Selection**: Dropdown with common surgical procedures
-- **Session Information**: Start time, patient ID (with privacy toggle)
-- **Expected Instruments**: Total count of required tools
-- **Privacy Mode**: Toggle to hide sensitive patient information
+- **Real-time Webcam Feed** with live tool detection
+- **YOLO Object Segmentation** for precise tool identification  
+- **Trained CLIP Classification** on 16 surgical tool types
+- **MCP Protocol Scraping** for procedure-specific requirements
+- **Live Validation Dashboard** with missing/extra tool alerts
+- **Session Management** for tracking validation history
 
-### Center Panel - Real-Time Visual Feedback
-- **Live Video Feed**: Real-time camera input with object detection
-- **Overlay System**: 
-  - ✅ Green boxes for correctly identified instruments
-  - ❌ Red boxes for extra/unneeded items
-  - ⚠️ Yellow boxes for missing optional items
-  - 🔲 Empty outlines for missing required items
-- **Playback Controls**: Live/Frame-by-frame/Pause modes
-- **Timeline Slider**: Navigate through recorded frames
-- **Snapshot Capture**: Take still images for review
+## 🚀 Quick Start
 
-### Right Panel - Smart Checklist & Validation
-- **Instrument Checklist**: 
-  - Collapsible tool groups
-  - Real-time status updates
-  - Count tracking (found/required)
-- **Issues Log**: 
-  - Real-time system observations
-  - Timestamped entries
-  - Color-coded by issue type
-- **Action Buttons**:
-  - 🟢 "Confirm Setup" - Validate current configuration
-  - 🔄 "Re-Scan" - Trigger new detection cycle
+### 1. Start Backend API
+```bash
+cd backend
+./start.sh
+# Backend runs on http://localhost:8000
+```
 
-## 🎨 Design Principles
+### 2. Start Frontend
+```bash
+cd frontend
+./start.sh
+# Frontend runs on http://localhost:3000
+```
 
-### Sterility & Security
-- **No Popups/Modals**: Prevents contamination risks
-- **No Typing Required**: Touch-friendly interface
-- **Colorblind-Safe**: All feedback uses accessible color schemes
-- **AORN Standards**: Tool naming follows medical standards
+## 📋 Usage Workflow
 
-### Responsive Design
-- **Tablet Optimized**: Primary target for OR wall-mounted screens
-- **Large Fonts**: Readable from across the room
-- **Clear Iconography**: Intuitive visual feedback
-- **Minimal Colors**: Blues/greys/greens for professional appearance
+1. **Enter Procedure:** Type emergency procedure (e.g. "Code Blue")
+2. **Start Session:** System scrapes protocol requirements  
+3. **Live Detection:** Point camera at crash cart tools
+4. **Real-time Validation:** See detected vs required tools
+5. **Validation Report:** Get completion percentage and alerts
+
+## 🛠️ Supported Tools
+
+The trained CLIP model recognizes these 16 surgical tools:
+- Metzenbaum scissors, Army-Navy retractor, Yankauer suction tip
+- Sterile surgical towel, Scalpel with blade, Weitlaner retractor  
+- Mosquito clamp, Sterile gauze pad, Raytec surgical sponge
+- Mayo-Hegar needle holder, Sponge forceps, Deaver retractor
+- Adson forceps, Sterile basin (metal), Bulldog clamp
+
+## 🏗️ Architecture
+
+```
+┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
+│   React Web     │───▶│   FastAPI        │───▶│   YOLO + CLIP   │
+│   Frontend      │    │   Backend        │    │   Detection     │
+│   (Port 3000)   │    │   (Port 8000)    │    │   Services      │
+└─────────────────┘    └──────────────────┘    └─────────────────┘
+                                │
+                                ▼
+                       ┌──────────────────┐
+                       │   MCP Scraping   │
+                       │   Agent          │
+                       └──────────────────┘
+```
+
+## 📱 Frontend Components
+
+- **Webcam Feed:** Live camera stream with detection overlays
+- **Procedure Input:** Emergency procedure selection
+- **Detection Stats:** Real-time tool counts and completion percentage
+- **Tool Checklist:** Required vs detected tools with status indicators
+- **Controls:** Capture, validate, and reset functions
+
+## � API Endpoints
+
+- `POST /input-procedure` - Start new validation session
+- `POST /realtime-validate` - Process single camera frame
+- `POST /validate-inventory` - Full inventory cross-reference
+- `GET /session/{id}` - Get session data
+- `GET /logs` - Validation history
+
+## 💻 Development
+
+### Backend Requirements
+```bash
+pip install -r backend/requirements.txt
+```
+
+### Frontend Requirements  
+```bash
+cd frontend && npm install
+```
+
+### File Structure
+```
+├── backend/          # FastAPI server
+│   ├── main.py      # API endpoints
+│   ├── services.py  # YOLO + CLIP integration
+│   └── requirements.txt
+├── frontend/         # React app
+│   ├── src/App.js   # Main component
+│   └── package.json
+├── CLIP/            # Trained model
+│   ├── best_surgical_tool_clip.pth
+│   └── surgical_tool_metadata.pkl
+└── MCP-scraping/    # Protocol scraper
+```
+
+## 🎮 Demo
+
+1. Run both backend and frontend
+2. Navigate to http://localhost:3000  
+3. Enter "Code Blue" as procedure
+4. Point camera at medical tools
+5. Watch real-time detection and validation!
+
+## 🔬 Technical Details
+
+- **YOLO:** Object detection and segmentation
+- **CLIP:** Fine-tuned on surgical instruments  
+- **MCP:** Medical protocol scraping agent
+- **FastAPI:** RESTful backend with session management
+- **React:** Real-time frontend with webcam integration
+
+Built for TerraHacks medical AI hackathon 🏆
 
 ## 🔧 API Endpoints
 

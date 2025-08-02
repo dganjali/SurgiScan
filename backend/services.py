@@ -21,8 +21,8 @@ class SegmentationService:
         self.model = YOLO(os.path.join(os.path.dirname(__file__), '..', 'yolov8n.pt'))
         print("YOLO model loaded!")
         
-    def segment_image(self, image_path: str, output_dir: str = "cropped_objects") -> list:
-        """Segment objects from image and return list of cropped image paths"""
+    def segment_image(self, image_path: str, output_dir: str = "cropped_objects") -> dict:
+        """Segment objects from image and return list of cropped image paths with bounding boxes"""
         os.makedirs(output_dir, exist_ok=True)
         
         # Read image
@@ -34,15 +34,32 @@ class SegmentationService:
         results = self.model(image)
         
         cropped_paths = []
+        bounding_boxes = []
+        annotated_image = image.copy()
+        
         for i, result in enumerate(results):
             boxes = result.boxes
             if boxes is not None:
                 for j, box in enumerate(boxes):
                     # Get bounding box coordinates
                     x1, y1, x2, y2 = box.xyxy[0].cpu().numpy().astype(int)
+                    confidence = box.conf[0].cpu().numpy().item()
+                    
+                    # Draw bounding box on the annotated image with thicker lines for visibility
+                    cv2.rectangle(annotated_image, (x1, y1), (x2, y2), (0, 255, 0), 3)
+                    cv2.putText(annotated_image, f'Object {j} ({confidence:.2f})', 
+                               (x1, y1-10), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
+                    
+                    # Add padding for cropping
+                    padding = 20
+                    h, w = image.shape[:2]
+                    x1_crop = max(0, x1 - padding)
+                    y1_crop = max(0, y1 - padding)
+                    x2_crop = min(w, x2 + padding)
+                    y2_crop = min(h, y2 + padding)
                     
                     # Crop the object
-                    cropped_object = image[y1:y2, x1:x2]
+                    cropped_object = image[y1_crop:y2_crop, x1_crop:x2_crop]
                     
                     # Save cropped object
                     crop_filename = f"crop_{i}_{j}.jpg"
@@ -50,7 +67,24 @@ class SegmentationService:
                     cv2.imwrite(crop_path, cropped_object)
                     cropped_paths.append(crop_path)
                     
-        return cropped_paths
+                    # Store bounding box info
+                    bounding_boxes.append({
+                        'x1': int(x1), 'y1': int(y1), 'x2': int(x2), 'y2': int(y2),
+                        'confidence': float(confidence),
+                        'object_id': f"{i}_{j}",
+                        'crop_path': crop_path
+                    })
+        
+        # Save annotated image with bounding boxes
+        annotated_path = os.path.join(output_dir, "annotated_image.jpg")
+        cv2.imwrite(annotated_path, annotated_image)
+                    
+        return {
+            'cropped_paths': cropped_paths,
+            'bounding_boxes': bounding_boxes,
+            'annotated_image_path': annotated_path,
+            'total_objects': len(cropped_paths)
+        }
 
 class CLIPService:
     def __init__(self):
