@@ -6,7 +6,7 @@ Real-time computer vision system for validating surgical tool inventory in medic
 
 - **Real-time Webcam Feed** with live tool detection
 - **YOLO Object Segmentation** for precise tool identification  
-- **Trained CLIP Classification** on 16 surgical tool types
+- **Trained CLIP (Contrastive Language-Image Pre-Training) Classification** on 16 surgical tool types
 - **MCP Protocol Scraping** for procedure-specific requirements
 - **Live Validation Dashboard** with missing/extra tool alerts
 - **Session Management** for tracking validation history
