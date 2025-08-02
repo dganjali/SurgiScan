@@ -5,7 +5,7 @@ from natsort import natsorted
 # Settings
 image_folder = 'video_clip_results/frames_with_boxes'        # Folder containing .jpg files
 output_file = 'output.mp4'     # Output video file
-fps = 30                       # Frames per second
+fps = 10                       # Frames per second
 
 # Get list of .jpg files, sorted naturally
 images = [img for img in os.listdir(image_folder) if img.endswith(".jpg")]

@@ -1,13 +1,8 @@
-# Video Object Detection + CLIP Classification Pipeline (Comprehensive Detection)
+# Video Object Detection Pipeline (Manual Labeling)
 # This script processes a video file frame-by-frame using:
-# 1. Detectron2 RetinaNet for object detection with multiple strategies for maximum coverage
-# 2. CLIP model for surgical tool classification (not YOLO!)
-# 
-# Detection Strategies for Maximum Object Coverage:
-# - Lower detection threshold (0.3) to catch more objects
-# - Multi-scale detection (original + resized frames)
-# - Higher candidate limit (1000) for thorough searching
-# - Only draws boxes for high-confidence objects (≥0.65) but processes all detections
+# 1. Detectron2 RetinaNet for object detection
+# 2. Labels each detected object with letters (a, b, c, etc.) for manual review
+# 3. No CLIP classification - human labeling instead
 
 import cv2
 import torch
@@ -18,44 +13,12 @@ from detectron2.config import get_cfg
 from detectron2 import model_zoo
 from detectron2.data import MetadataCatalog
 
-# Import CLIP pipeline for surgical tool classification
+# Import for object detection only (no CLIP needed)
 import sys
-sys.path.append('CLIP')
 
-try:
-    from clip_inference import classify_image, load_trained_model
-    
-    # Load CLIP model and preprocess for surgical tool classification
-    print("Loading trained CLIP model for surgical tool classification...")
-    clip_device = "cuda" if torch.cuda.is_available() else "cpu"
-    
-    # Use absolute paths to ensure we're loading the correct trained model
-    current_dir = os.path.dirname(os.path.abspath(__file__))
-    model_path = os.path.join(current_dir, "CLIP", "best_surgical_tool_clip.pth")
-    metadata_path = os.path.join(current_dir, "CLIP", "surgical_tool_metadata.pkl")
-    
-    # Verify the model files exist
-    if not os.path.exists(model_path):
-        raise FileNotFoundError(f"Trained CLIP model not found at: {model_path}")
-    if not os.path.exists(metadata_path):
-        raise FileNotFoundError(f"CLIP metadata not found at: {metadata_path}")
-    
-    print(f"Loading CLIP model from: {model_path}")
-    print(f"Loading metadata from: {metadata_path}")
-    
-    clip_model, clip_preprocess, clip_tokenizer, clip_metadata = load_trained_model(
-        model_path, metadata_path, clip_device
-    )
-    CLIP_AVAILABLE = True
-    print(f"✓ CLIP model loaded successfully with {len(clip_metadata['class_names'])} surgical tool classes")
-    print("✓ Available tool classes:", clip_metadata['class_names'])
-    print(f"✓ Using device: {clip_device}")
-except ImportError as e:
-    print(f"CLIP not available: {e}")
-    CLIP_AVAILABLE = False
-except Exception as e:
-    print(f"Error loading CLIP model: {e}")
-    CLIP_AVAILABLE = False
+# No CLIP import needed for manual labeling
+CLIP_AVAILABLE = False
+print("Manual labeling mode - CLIP classification disabled")
 
 VIDEO_PATH = "video.mp4"  # Change this to your video filename
 
@@ -73,10 +36,10 @@ def process_video_with_detection():
     cfg = get_cfg()
     cfg.merge_from_file(model_zoo.get_config_file("COCO-Detection/retinanet_R_50_FPN_3x.yaml"))
     
-    # Use more conservative thresholds for better accuracy
-    cfg.MODEL.RETINANET.SCORE_THRESH_TEST = 0.6  # Increased from 0.3 to reduce false positives
-    cfg.MODEL.RETINANET.NMS_THRESH_TEST = 0.4    # Stricter NMS to remove more overlapping boxes
-    cfg.MODEL.RETINANET.TOPK_CANDIDATES_TEST = 500  # Reduced from 1000 for more selective detection
+    # Use balanced thresholds - not too low (false positives) not too high (missed detections)
+    cfg.MODEL.RETINANET.SCORE_THRESH_TEST = 0.45  # Balanced threshold between 0.3 and 0.6
+    cfg.MODEL.RETINANET.NMS_THRESH_TEST = 0.5     # Standard NMS threshold
+    cfg.MODEL.RETINANET.TOPK_CANDIDATES_TEST = 500  # Moderate candidate limit
     
     # Load model weights
     cfg.MODEL.WEIGHTS = model_zoo.get_checkpoint_url("COCO-Detection/retinanet_R_50_FPN_3x.yaml")
@@ -86,8 +49,8 @@ def process_video_with_detection():
     metadata = MetadataCatalog.get(cfg.DATASETS.TRAIN[0])
     
     print(f"Using device: {cfg.MODEL.DEVICE}")
-    print(f"Detection threshold: {cfg.MODEL.RETINANET.SCORE_THRESH_TEST} (conservative for accuracy)")
-    print(f"This will detect fewer but more accurate objects")
+    print(f"Detection threshold: {cfg.MODEL.RETINANET.SCORE_THRESH_TEST} (balanced for accuracy and coverage)")
+    print(f"This will detect objects with moderate confidence")
     print(f"Bounding boxes will only be drawn for objects with ≥0.65 confidence")
     
     # Open video
