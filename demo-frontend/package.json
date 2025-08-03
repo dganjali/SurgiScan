@@ -1,0 +1,36 @@
+{
+  "name": "medical-equipment-validator-frontend",
+  "version": "1.0.0",
+  "description": "Modern dashboard for validating medical equipment in crash carts and surgical backtables",
+  "main": "index.html",
+  "scripts": {
+    "start": "python -m http.server 8000",
+    "dev": "python -m http.server 8000",
+    "serve": "python -m http.server 8000"
+  },
+  "keywords": [
+    "medical",
+    "equipment",
+    "validation",
+    "dashboard",
+    "crash-cart",
+    "surgical-backtable",
+    "computer-vision",
+    "ai"
+  ],
+  "author": "Medical Equipment Validator Team",
+  "license": "MIT",
+  "dependencies": {
+    "tailwindcss": "^3.3.0",
+    "feather-icons": "^4.29.0"
+  },
+  "devDependencies": {},
+  "browserslist": [
+    "> 1%",
+    "last 2 versions",
+    "not dead"
+  ],
+  "engines": {
+    "node": ">=14.0.0"
+  }
+} 
