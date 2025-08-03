@@ -18,8 +18,8 @@ if not images:
 first_frame = cv2.imread(os.path.join(image_folder, images[0]))
 height, width, _ = first_frame.shape
 
-# Define video writer
-fourcc = cv2.VideoWriter_fourcc(*'mp4v')  # Use 'XVID' for .avi
+# Define video writer with H.264 codec for web compatibility
+fourcc = cv2.VideoWriter_fourcc(*'avc1')  # Use H.264 codec for web compatibility
 out = cv2.VideoWriter(output_file, fourcc, fps, (width, height))
 
 # Write each image frame
