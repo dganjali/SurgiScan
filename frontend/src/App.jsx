@@ -541,7 +541,15 @@ function App() {
         </div>
         <div className="tools-panel">
           <div className="tools-section">
-            <h3>Required Tools ({requiredTools.length})</h3>
+            <div className="section-header">
+              <h3>Required Tools ({requiredTools.length})</h3>
+              <button 
+                onClick={() => setShowToolReference(!showToolReference)}
+                className="toggle-reference-small-btn"
+              >
+                {showToolReference ? '🔍' : '📚'}
+              </button>
+            </div>
             <div className="tools-checklist">
               {requiredTools.map((tool, index) => {
                 const isDetected = Object.keys(detectedTools).some(
@@ -563,6 +571,36 @@ function App() {
               })}
             </div>
           </div>
+
+          {/* Tool Reference in Validation */}
+          {showToolReference && (
+            <div className="tools-section">
+              <h3>🔍 Tool Reference</h3>
+              <div className="reference-tools-compact">
+                {referenceTools.slice(0, 8).map((tool, index) => {
+                  const isDetected = Object.keys(detectedTools).some(detected => 
+                    detected.toLowerCase().includes(tool.name.toLowerCase()) ||
+                    tool.name.toLowerCase().includes(detected.toLowerCase())
+                  );
+                  
+                  return (
+                    <div key={index} className={`reference-tool-compact ${isDetected ? 'detected' : 'not-detected'}`}>
+                      <img 
+                        src={`${API_BASE_URL}${tool.image_url}`}
+                        alt={tool.display_name}
+                        className="tool-reference-image-small"
+                        onError={(e) => {
+                          e.target.style.display = 'none';
+                        }}
+                      />
+                      <span className="tool-name-small">{tool.display_name}</span>
+                      <span className="detection-indicator">{isDetected ? '✅' : '❌'}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
           <div className="tools-section">
             <h3>Detected Tools ({Object.keys(detectedTools).length})</h3>
             <div className="detected-tools">

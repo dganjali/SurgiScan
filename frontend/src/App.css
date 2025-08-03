@@ -193,6 +193,143 @@ body {
   font-size: 0.9rem;
 }
 
+/* Tool Reference Panel */
+.tool-reference-panel {
+  width: 350px;
+  background: var(--gray-50);
+  border: 1px solid var(--gray-200);
+  border-radius: 8px;
+  padding: 1rem;
+  height: fit-content;
+  max-height: 600px;
+  overflow-y: auto;
+}
+
+.tool-reference-panel h3 {
+  color: var(--gray-700);
+  margin-bottom: 1rem;
+  font-size: 1.1rem;
+  font-weight: 600;
+  text-align: center;
+}
+
+.reference-tools-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.reference-tool-item {
+  background: white;
+  border: 2px solid var(--gray-200);
+  border-radius: 8px;
+  padding: 0.75rem;
+  text-align: center;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.reference-tool-item.detected {
+  border-color: var(--success-green);
+  background: rgba(16, 185, 129, 0.05);
+}
+
+.reference-tool-item.not-detected {
+  border-color: var(--gray-300);
+  opacity: 0.7;
+}
+
+.tool-image-container {
+  position: relative;
+  margin-bottom: 0.5rem;
+}
+
+.tool-reference-image {
+  width: 100%;
+  height: 80px;
+  object-fit: cover;
+  border-radius: 4px;
+  border: 1px solid var(--gray-200);
+}
+
+.detection-status {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  background: white;
+  border-radius: 50%;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+  box-shadow: var(--shadow-sm);
+}
+
+.tool-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.tool-info .tool-name {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--gray-800);
+  line-height: 1.2;
+}
+
+.tool-info .tool-count {
+  font-size: 0.7rem;
+  color: var(--gray-500);
+}
+
+.reference-summary {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--gray-200);
+}
+
+.summary-stat {
+  text-align: center;
+}
+
+.summary-stat .stat-number {
+  display: block;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--primary-blue);
+  margin-bottom: 0.25rem;
+}
+
+.summary-stat .stat-label {
+  font-size: 0.7rem;
+  color: var(--gray-600);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 1200px) {
+  .video-analysis-container {
+    grid-template-columns: 1fr;
+  }
+  
+  .tool-reference-panel {
+    width: 100%;
+    max-height: 400px;
+  }
+  
+  .reference-tools-grid {
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  }
+}
+
 /* Crop Analysis Section */
 .crop-analysis-section {
   background: white;
