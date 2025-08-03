@@ -1,4 +1,4 @@
-# 🏥 Medical Crash Cart Validator
+# 🏥 SurgiScan - Real-Time CV-Driven Agentic Medical Crash Cart & Surgical Backtable Instrumentation Validator
 
 Real-time computer vision system for validating surgical tool inventory in medical crash carts using YOLO segmentation, trained CLIP classification, and MCP protocol scraping.
 
