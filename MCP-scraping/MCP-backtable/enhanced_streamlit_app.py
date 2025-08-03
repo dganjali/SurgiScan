@@ -197,7 +197,15 @@ class EnhancedMedicalApp:
     def __init__(self):
         self.crash_cart_tools = get_all_tools()
         self.surgical_procedures = get_all_surgical_procedures()
-        self.surgical_mcp_server = SurgicalMCPServer()
+        # Initialize MCP server with OpenAI API key from environment
+        import os
+        openai_api_key = os.getenv("OPENAI_API_KEY")
+        if openai_api_key:
+            self.surgical_mcp_server = SurgicalMCPServer(openai_api_key=openai_api_key)
+            st.success("✅ MCP Server initialized with OpenAI API key")
+        else:
+            self.surgical_mcp_server = SurgicalMCPServer()
+            st.warning("⚠️ MCP Server initialized without OpenAI API key - filtering may be limited")
         
     def search_medical_literature(self, procedure: str):
         """Search for medical literature about the procedure (for crash cart)"""
@@ -439,13 +447,17 @@ def main():
                     )
                     if st.button(f"Select {procedure}", key=f"btn_{i}"):
                         selected_procedure = procedure
+                        st.session_state['selected_procedure'] = procedure
+                        st.success(f"Selected: {procedure}")
             
-            # If no procedure selected from tabs, use first one
-            if selected_procedure is None:
-                selected_procedure = list(specialty_procedures.values())[0][0]
-            
-            st.subheader("Selected Procedure")
-            st.info(f"**{selected_procedure}**")
+            # Show current selection
+            current_selection = st.session_state.get('selected_procedure')
+            if current_selection:
+                st.subheader("Selected Procedure")
+                st.info(f"**{current_selection}**")
+            else:
+                st.subheader("Selected Procedure")
+                st.warning("Please select a procedure from the tabs above")
             
             # Database info
             st.subheader("📊 Surgical Database Statistics")
@@ -503,45 +515,68 @@ def main():
         
         else:
             if st.button("🔍 Analyze Surgical Procedure", type="primary", use_container_width=True):
-                if 'selected_procedure' in locals():
-                    # Create progress bar
-                    progress_bar = st.progress(0)
-                    status_text = st.empty()
+                # Get the selected procedure from session state
+                selected_procedure = st.session_state.get('selected_procedure')
+                
+                if not selected_procedure:
+                    st.error("Please select a surgical procedure first!")
+                    return
+                
+                # Create progress bar
+                progress_bar = st.progress(0)
+                status_text = st.empty()
+                
+                # Surgical analysis steps
+                steps = [
+                    "Initializing MCP server for surgical analysis...",
+                    "Searching surgical literature databases...",
+                    "Analyzing surgical society guidelines...",
+                    "Extracting instrument mentions from protocols...",
+                    "Cross-referencing with surgical backtable inventory...",
+                    "Validating instruments against procedure requirements...",
+                    "Categorizing instruments by type and function...",
+                    "Generating comprehensive surgical analysis report...",
+                    "Complete"
+                ]
+                
+                try:
+                    # Run analysis with extended progress updates
+                    for i, step in enumerate(steps):
+                        n_sleep = random.randint(6, 11)
+                        status_text.text(step)
+                        progress_bar.progress((i + 1) / len(steps))
+                        time.sleep(n_sleep)
                     
-                    # Surgical analysis steps
-                    steps = [
-                        "Initializing MCP server for surgical analysis...",
-                        "Searching surgical literature databases...",
-                        "Analyzing surgical society guidelines...",
-                        "Extracting instrument mentions from protocols...",
-                        "Cross-referencing with surgical backtable inventory...",
-                        "Validating instruments against procedure requirements...",
-                        "Categorizing instruments by type and function...",
-                        "Generating comprehensive surgical analysis report...",
-                        "Complete"
-                    ]
+                    # Get results using async function
+                    st.info(f"🔍 Analyzing procedure: {selected_procedure}")
+                    st.info("🤖 MCP Server agents are actively web scraping surgical literature...")
+                    result = asyncio.run(app.analyze_surgical_procedure(selected_procedure))
                     
-                    try:
-                        # Run analysis with extended progress updates
-                        for i, step in enumerate(steps):
-                            n_sleep = random.randint(8, 15)
-                            status_text.text(step)
-                            progress_bar.progress((i + 1) / len(steps))
-                            time.sleep(n_sleep)
-                        
-                        # Get results using async function
-                        result = asyncio.run(app.analyze_surgical_procedure(selected_procedure))
-                        
-                        # Store results in session state
-                        st.session_state['surgical_result'] = result
-                        st.session_state['surgical_complete'] = True
-                        
-                        status_text.text("✅ Surgical analysis complete!")
-                        progress_bar.progress(1.0)
-                        
-                    except Exception as e:
-                        st.error(f"Error during surgical analysis: {str(e)}")
-                        st.session_state['surgical_complete'] = False
+                    # Filter instruments based on validation score threshold (0.6)
+                    validated_instruments = []
+                    initial_instruments = []
+                    
+                    for instrument in result.get('validated_instruments', []):
+                        if instrument.get('validation_score', 0) >= 0.6:
+                            validated_instruments.append(instrument)
+                        else:
+                            initial_instruments.append(instrument)
+                    
+                    # Update result with filtered instruments
+                    result['validated_instruments'] = validated_instruments
+                    result['initial_instruments'] = initial_instruments
+                    result['filtered_instruments'] = [inst['name'] for inst in validated_instruments]
+                    
+                    # Store results in session state
+                    st.session_state['surgical_result'] = result
+                    st.session_state['surgical_complete'] = True
+                    
+                    status_text.text("✅ Surgical analysis complete!")
+                    progress_bar.progress(1.0)
+                    
+                except Exception as e:
+                    st.error(f"Error during surgical analysis: {str(e)}")
+                    st.session_state['surgical_complete'] = False
     
     with col2:
         st.subheader("📈 Quick Stats")
@@ -667,7 +702,7 @@ def main():
                                 'thickness': 0.75,
                                 'value': 90
                             }
-                        }
+                        } 
                     ))
                     st.plotly_chart(fig, use_container_width=True)
             
@@ -718,27 +753,34 @@ def main():
                 st.metric("Processing Time", f"{result['processing_time_seconds']:.2f}s")
             
             # Detailed results with enhanced tabs
-            tabs = st.tabs(["📋 All Instruments", "📂 By Category", "✅ Validated Instruments", "📚 Sources", "📊 Visualizations", "📄 Export"])
+            tabs = st.tabs(["📋 Initial Instruments", "✅ Validated Instruments", "📂 By Category", "📚 Sources", "📊 Visualizations", "📄 Export"])
             
             with tabs[0]:
-                st.subheader("Required Surgical Instruments")
-                if result['instruments']:
-                    for instrument in result['instruments']:
-                        st.markdown(f'<div class="instrument-item">• {instrument}</div>', unsafe_allow_html=True)
+                st.subheader("Initial Surgical Instruments (All Mentions)")
+                if result.get('initial_instruments'):
+                    for instrument in result['initial_instruments']:
+                        # Color code validation score
+                        if instrument['validation_score'] >= 0.6:
+                            score_class = "validation-high"
+                        elif instrument['validation_score'] >= 0.4:
+                            score_class = "validation-medium"
+                        else:
+                            score_class = "validation-low"
+                        
+                        st.markdown(f"""
+                        <div class="instrument-item">
+                            <strong>{instrument['name']}</strong><br>
+                            <span class="{score_class}">Validation Score: {instrument['validation_score']:.2f}</span><br>
+                            <em>Reasoning:</em> {instrument['reasoning']}<br>
+                            <em>Category:</em> {instrument['category']}
+                        </div>
+                        """, unsafe_allow_html=True)
                 else:
-                    st.warning("No instruments found for this procedure")
+                    st.warning("No initial instruments found for this procedure")
             
             with tabs[1]:
-                st.subheader("Instruments by Category")
-                for category, instruments in result['categorized_instruments'].items():
-                    if instruments:
-                        st.markdown(f'<div class="category-header">{category}</div>', unsafe_allow_html=True)
-                        for instrument in instruments:
-                            st.markdown(f'<div class="instrument-item">• {instrument}</div>', unsafe_allow_html=True)
-            
-            with tabs[2]:
-                st.subheader("✅ Validated Instruments with Reasoning")
-                if result['validated_instruments']:
+                st.subheader("✅ Validated Instruments (Score ≥ 0.6)")
+                if result.get('validated_instruments'):
                     for instrument in result['validated_instruments']:
                         # Color code validation score
                         if instrument['validation_score'] >= 0.8:
@@ -764,8 +806,24 @@ def main():
                 else:
                     st.warning("No validated instruments found for this procedure")
             
+            with tabs[2]:
+                st.subheader("📂 Validated Instruments by Category")
+                # Create categorized instruments from validated instruments only
+                validated_categorized = {}
+                for instrument in result.get('validated_instruments', []):
+                    category = instrument['category']
+                    if category not in validated_categorized:
+                        validated_categorized[category] = []
+                    validated_categorized[category].append(instrument['name'])
+                
+                for category, instruments in validated_categorized.items():
+                    if instruments:
+                        st.markdown(f'<div class="category-header">{category}</div>', unsafe_allow_html=True)
+                        for instrument in instruments:
+                            st.markdown(f'<div class="instrument-item">• {instrument}</div>', unsafe_allow_html=True)
+            
             with tabs[3]:
-                st.subheader("📚 Surgical Sources Analyzed")
+                st.subheader("📚 Academic & Medical Sources Analyzed")
                 if result['sources']:
                     for source in result['sources']:
                         st.markdown(f"""
@@ -774,7 +832,7 @@ def main():
                             <em>URL:</em> {source['url']}<br>
                             <em>Relevance Score:</em> {source['relevance_score']:.2f}<br>
                             <em>Method:</em> {source['extraction_method']}<br>
-                            <em>Content:</em> {source['content']}
+                            <em>Content:</em> {source['content'][:200]}...
                         </div>
                         """, unsafe_allow_html=True)
                 else:
@@ -783,10 +841,17 @@ def main():
             with tabs[4]:
                 st.subheader("Data Visualizations")
                 
-                # Category distribution
-                if result['categorized_instruments']:
+                # Category distribution (only validated instruments)
+                validated_categorized = {}
+                for instrument in result.get('validated_instruments', []):
+                    category = instrument['category']
+                    if category not in validated_categorized:
+                        validated_categorized[category] = []
+                    validated_categorized[category].append(instrument['name'])
+                
+                if validated_categorized:
                     category_data = []
-                    for category, instruments in result['categorized_instruments'].items():
+                    for category, instruments in validated_categorized.items():
                         if instruments:
                             category_data.append({
                                 'Category': category,
@@ -796,7 +861,7 @@ def main():
                     if category_data:
                         df = pd.DataFrame(category_data)
                         fig = px.bar(df, x='Category', y='Count', 
-                                   title="Instruments by Category",
+                                   title="Validated Instruments by Category",
                                    color='Count',
                                    color_continuous_scale='Purples')
                         st.plotly_chart(fig, use_container_width=True)
@@ -814,7 +879,7 @@ def main():
                         df = pd.DataFrame(validation_data)
                         fig = px.scatter(df, x='Instrument', y='Validation Score', 
                                        color='Category',
-                                       title="Instrument Validation Scores",
+                                       title="Validated Instrument Scores",
                                        hover_data=['Category'])
                         st.plotly_chart(fig, use_container_width=True)
                 
@@ -854,14 +919,14 @@ def main():
                     mime="application/json"
                 )
                 
-                # CSV export for instruments
-                if result['instruments']:
-                    instruments_df = pd.DataFrame(result['instruments'], columns=['Instrument'])
+                # CSV export for validated instruments
+                if result.get('filtered_instruments'):
+                    instruments_df = pd.DataFrame(result['filtered_instruments'], columns=['Instrument'])
                     csv = instruments_df.to_csv(index=False)
                     st.download_button(
-                        label="📥 Download Instruments CSV",
+                        label="📥 Download Validated Instruments CSV",
                         data=csv,
-                        file_name=f"instruments_{result['procedure'].replace(' ', '_')}.csv",
+                        file_name=f"validated_instruments_{result['procedure'].replace(' ', '_')}.csv",
                         mime="text/csv"
                     )
                 
