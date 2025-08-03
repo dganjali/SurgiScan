@@ -90,10 +90,10 @@ function App() {
   // Load reference tool images
   const loadReferenceTools = async () => {
     try {
-      const response = await axios.get(`${API_BASE_URL}/tool-reference`);
-      setReferenceTools(response.data.tools || []);
+        const response = await axios.get(`${API_BASE_URL}/tool-reference`);
+        setReferenceTools(response.data.tools || []);
     } catch (error) {
-      console.error('Error loading reference tools:', error);
+        console.error('Error loading reference tools:', error);
     }
   };
 
@@ -216,11 +216,14 @@ function App() {
                 ref={videoRef}
                 className="analysis-video"
                 controls
-                onPlay={() => setIsVideoPlaying(true)}
+                onPlay={() => {
+                    setIsVideoPlaying(true);
+                    setShowToolReference(true); // Ensure tool reference panel is displayed
+                }}
                 onPause={() => setIsVideoPlaying(false)}
                 onEnded={() => setShowToolReference(true)}
               >
-                <source src="/output.mp4" type="video/mp4" />
+                <source src={`${API_BASE_URL}/video`} type="video/mp4" />
                 Your browser does not support the video tag.
               </video>
               <div className="video-controls">
@@ -244,32 +247,31 @@ function App() {
               <h3>🔍 Tool Reference Checklist</h3>
               <div className="reference-tools-grid">
                 {referenceTools.map((tool, index) => {
-                  const isDetected = uniqueCrops.some(detected => 
-                    detected.toLowerCase().includes(tool.name.toLowerCase()) ||
-                    tool.name.toLowerCase().includes(detected.toLowerCase())
-                  );
-                  
-                  return (
-                    <div key={index} className={`reference-tool-item ${isDetected ? 'detected' : 'not-detected'}`}>
-                      <div className="tool-image-container">
-                        <img 
-                          src={`${API_BASE_URL}${tool.image_url}`}
-                          alt={tool.display_name}
-                          className="tool-reference-image"
-                          onError={(e) => {
-                            e.target.style.display = 'none';
-                          }}
-                        />
-                        <div className="detection-status">
-                          {isDetected ? '✅' : '❌'}
+                    const isDetected = uniqueCrops.some(detected => 
+                        detected.toLowerCase().includes(tool.name.toLowerCase()) ||
+                        tool.name.toLowerCase().includes(detected.toLowerCase())
+                    );
+                    
+                    return (
+                      <div key={index} className={`reference-tool-item ${isDetected ? 'detected' : 'not-detected'}`}>
+                        <div className="tool-image-container">
+                          <img 
+                            src={`${API_BASE_URL}${tool.image}`} // Fixed image URL
+                            alt={tool.name}
+                            className="tool-reference-image"
+                            onError={(e) => {
+                              e.target.style.display = 'none';
+                            }}
+                          />
+                          <div className="detection-status">
+                            {isDetected ? '✅' : '❌'}
+                          </div>
+                        </div>
+                        <div className="tool-info">
+                          <span className="tool-name">{tool.name}</span>
                         </div>
                       </div>
-                      <div className="tool-info">
-                        <span className="tool-name">{tool.display_name}</span>
-                        <span className="tool-count">{tool.total_images} ref images</span>
-                      </div>
-                    </div>
-                  );
+                    );
                 })}
               </div>
               <div className="reference-summary">
