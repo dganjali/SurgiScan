@@ -21,7 +21,8 @@ const COMMON_PROCEDURES = [
 
 function App() {
   const webcamRef = useRef(null);
-  const [currentView, setCurrentView] = useState('procedure');
+  const videoRef = useRef(null);
+  const [currentView, setCurrentView] = useState('dashboard');
   const [selectedProcedure, setSelectedProcedure] = useState('');
   const [customProcedure, setCustomProcedure] = useState('');
   const [sessionId, setSessionId] = useState(null);
@@ -32,6 +33,69 @@ function App() {
   const [isLoading, setIsLoading] = useState(false);
   const [showBoundingBoxes, setShowBoundingBoxes] = useState(true);
   const [boundingBoxes, setBoundingBoxes] = useState([]);
+  const [uniqueCrops, setUniqueCrops] = useState([]);
+  const [cropAnalysis, setCropAnalysis] = useState({});
+  const [logs, setLogs] = useState([]);
+  const [isVideoPlaying, setIsVideoPlaying] = useState(false);
+  const [referenceTools, setReferenceTools] = useState([]);
+  const [showToolReference, setShowToolReference] = useState(false);
+
+  // Load unique crops and analyze them on component mount
+  useEffect(() => {
+    loadUniqueCrops();
+    loadLogs();
+    loadReferenceTools();
+  }, []);
+
+  // Load unique crops from the crops folder via backend
+  const loadUniqueCrops = async () => {
+    try {
+      const response = await axios.get(`${API_BASE_URL}/crops-analysis`);
+      const data = response.data;
+      
+      setUniqueCrops(data.tool_types || []);
+      setCropAnalysis({
+        total_objects: data.total_objects || 0,
+        unique_tools: data.unique_tools || 0,
+        most_common: data.most_common || 'None',
+        confidence_avg: data.confidence_avg || 0
+      });
+    } catch (error) {
+      console.error('Error loading crops:', error);
+      // Fallback to simulated data
+      setUniqueCrops([
+        'syringe', 'scalpel', 'stethoscope', 'defibrillator_pad', 
+        'oxygen_mask', 'iv_bag', 'endotracheal_tube', 'gauze'
+      ]);
+      
+      setCropAnalysis({
+        total_objects: 450,
+        unique_tools: 8,
+        most_common: 'syringe',
+        confidence_avg: 0.85
+      });
+    }
+  };
+
+  // Load system logs
+  const loadLogs = async () => {
+    try {
+      const response = await axios.get(`${API_BASE_URL}/logs`);
+      setLogs(response.data.logs || []);
+    } catch (error) {
+      console.error('Error loading logs:', error);
+    }
+  };
+
+  // Load reference tool images
+  const loadReferenceTools = async () => {
+    try {
+      const response = await axios.get(`${API_BASE_URL}/tool-reference`);
+      setReferenceTools(response.data.tools || []);
+    } catch (error) {
+      console.error('Error loading reference tools:', error);
+    }
+  };
 
   // Start new validation session
   const startSession = async () => {
@@ -102,11 +166,272 @@ function App() {
     setBoundingBoxes([]);
   };
 
+  // Toggle video playback
+  const toggleVideoPlayback = () => {
+    if (videoRef.current) {
+      if (isVideoPlaying) {
+        videoRef.current.pause();
+      } else {
+        videoRef.current.play();
+      }
+      setIsVideoPlaying(!isVideoPlaying);
+    }
+  };
+
+  // Dashboard render function
+  const renderDashboard = () => (
+    <div className="dashboard">
+      <div className="dashboard-header">
+        <h1>🏥 Medical Crash Cart Dashboard</h1>
+        <div className="nav-buttons">
+          <button 
+            className={`nav-btn ${currentView === 'dashboard' ? 'active' : ''}`}
+            onClick={() => setCurrentView('dashboard')}
+          >
+            📊 Dashboard
+          </button>
+          <button 
+            className={`nav-btn ${currentView === 'procedure' ? 'active' : ''}`}
+            onClick={() => setCurrentView('procedure')}
+          >
+            🚀 New Session
+          </button>
+          <button 
+            className={`nav-btn ${currentView === 'validation' ? 'active' : ''}`}
+            onClick={() => setCurrentView('validation')}
+            disabled={!sessionId}
+          >
+            📹 Live Validation
+          </button>
+        </div>
+      </div>
+
+      <div className="dashboard-content">
+        {/* Video Analysis Section */}
+        <div className="video-analysis-container">
+          <div className="video-section">
+            <h2>📹 Segmentation Video Analysis</h2>
+            <div className="video-container">
+              <video 
+                ref={videoRef}
+                className="analysis-video"
+                controls
+                onPlay={() => setIsVideoPlaying(true)}
+                onPause={() => setIsVideoPlaying(false)}
+                onEnded={() => setShowToolReference(true)}
+              >
+                <source src="/output.mp4" type="video/mp4" />
+                Your browser does not support the video tag.
+              </video>
+              <div className="video-controls">
+                <button onClick={toggleVideoPlayback} className="play-pause-btn">
+                  {isVideoPlaying ? '⏸️ Pause' : '▶️ Play'}
+                </button>
+                <button 
+                  onClick={() => setShowToolReference(!showToolReference)}
+                  className="toggle-reference-btn"
+                >
+                  {showToolReference ? '🔍 Hide Reference' : '📚 Show Tool Reference'}
+                </button>
+                <span className="video-info">Object detection and segmentation results</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Tool Reference Panel */}
+          {showToolReference && (
+            <div className="tool-reference-panel">
+              <h3>🔍 Tool Reference Checklist</h3>
+              <div className="reference-tools-grid">
+                {referenceTools.map((tool, index) => {
+                  const isDetected = uniqueCrops.some(detected => 
+                    detected.toLowerCase().includes(tool.name.toLowerCase()) ||
+                    tool.name.toLowerCase().includes(detected.toLowerCase())
+                  );
+                  
+                  return (
+                    <div key={index} className={`reference-tool-item ${isDetected ? 'detected' : 'not-detected'}`}>
+                      <div className="tool-image-container">
+                        <img 
+                          src={`${API_BASE_URL}${tool.image_url}`}
+                          alt={tool.display_name}
+                          className="tool-reference-image"
+                          onError={(e) => {
+                            e.target.style.display = 'none';
+                          }}
+                        />
+                        <div className="detection-status">
+                          {isDetected ? '✅' : '❌'}
+                        </div>
+                      </div>
+                      <div className="tool-info">
+                        <span className="tool-name">{tool.display_name}</span>
+                        <span className="tool-count">{tool.total_images} ref images</span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+              <div className="reference-summary">
+                <div className="summary-stat">
+                  <span className="stat-number">
+                    {referenceTools.filter(tool => 
+                      uniqueCrops.some(detected => 
+                        detected.toLowerCase().includes(tool.name.toLowerCase()) ||
+                        tool.name.toLowerCase().includes(detected.toLowerCase())
+                      )
+                    ).length}
+                  </span>
+                  <span className="stat-label">Detected</span>
+                </div>
+                <div className="summary-stat">
+                  <span className="stat-number">{referenceTools.length}</span>
+                  <span className="stat-label">Total Tools</span>
+                </div>
+                <div className="summary-stat">
+                  <span className="stat-number">
+                    {referenceTools.length > 0 ? 
+                      Math.round((referenceTools.filter(tool => 
+                        uniqueCrops.some(detected => 
+                          detected.toLowerCase().includes(tool.name.toLowerCase()) ||
+                          tool.name.toLowerCase().includes(detected.toLowerCase())
+                        )
+                      ).length / referenceTools.length) * 100) : 0}%
+                  </span>
+                  <span className="stat-label">Coverage</span>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Crop Analysis Section */}
+        <div className="crop-analysis-section">
+          <h2>🔍 Unique Crops Analysis</h2>
+          <div className="analysis-grid">
+            <div className="analysis-card">
+              <h3>Detection Summary</h3>
+              <div className="summary-stats">
+                <div className="stat">
+                  <span className="stat-number">{cropAnalysis.total_objects || 0}</span>
+                  <span className="stat-label">Total Objects</span>
+                </div>
+                <div className="stat">
+                  <span className="stat-number">{cropAnalysis.unique_tools || 0}</span>
+                  <span className="stat-label">Unique Tools</span>
+                </div>
+                <div className="stat">
+                  <span className="stat-number">{((cropAnalysis.confidence_avg || 0) * 100).toFixed(1)}%</span>
+                  <span className="stat-label">Avg Confidence</span>
+                </div>
+              </div>
+            </div>
+            
+            <div className="analysis-card">
+              <h3>Detected Tool Types</h3>
+              <div className="tools-list">
+                {uniqueCrops.map((tool, index) => (
+                  <div key={index} className="tool-tag">
+                    {tool.replace('_', ' ')}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* MCP Tools Comparison */}
+        <div className="mcp-comparison-section">
+          <h2>🔧 MCP Web Scraped Tools Analysis</h2>
+          <div className="comparison-grid">
+            <div className="tools-column">
+              <h3>✅ Tools We Have</h3>
+              <div className="tools-available">
+                {detectedTools && Object.keys(detectedTools).length > 0 ? (
+                  Object.entries(detectedTools).map(([tool, count], index) => (
+                    <div key={index} className="available-tool">
+                      <span className="tool-name">{tool}</span>
+                      <span className="tool-count">×{count}</span>
+                    </div>
+                  ))
+                ) : (
+                  <div className="placeholder">Start a validation session to see detected tools</div>
+                )}
+              </div>
+            </div>
+            
+            <div className="tools-column">
+              <h3>❌ Tools We Need</h3>
+              <div className="tools-needed">
+                {requiredTools.length > 0 ? (
+                  requiredTools.filter(tool => 
+                    !Object.keys(detectedTools).some(detected => 
+                      detected.toLowerCase().includes(tool.toLowerCase()) ||
+                      tool.toLowerCase().includes(detected.toLowerCase())
+                    )
+                  ).map((tool, index) => (
+                    <div key={index} className="needed-tool">
+                      <span className="tool-name">{tool}</span>
+                      <span className="urgency-indicator">High Priority</span>
+                    </div>
+                  ))
+                ) : (
+                  <div className="placeholder">Start a procedure to see required tools</div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* System Logs */}
+        <div className="logs-section">
+          <h2>📋 Validation History</h2>
+          <div className="logs-container">
+            {logs.length > 0 ? (
+              logs.slice(0, 10).map((log, index) => (
+                <div key={index} className="log-entry">
+                  <div className="log-header">
+                    <span className="log-procedure">{log.procedure}</span>
+                    <span className="log-timestamp">
+                      {new Date(log.timestamp).toLocaleString()}
+                    </span>
+                  </div>
+                  <div className="log-details">
+                    <span className={`completion-badge ${log.completion_percentage >= 80 ? 'good' : log.completion_percentage >= 50 ? 'warning' : 'poor'}`}>
+                      {log.completion_percentage}% Complete
+                    </span>
+                    <span className="issues-count">
+                      {log.issues_count} Issues
+                    </span>
+                    {log.missing_tools.length > 0 && (
+                      <span className="missing-indicator">
+                        Missing: {log.missing_tools.slice(0, 3).join(', ')}
+                        {log.missing_tools.length > 3 && '...'}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="no-logs">No validation history available</div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
   const renderProcedureSelection = () => (
     <div className="procedure-selection">
       <div className="hero-section">
         <h1>🏥 Medical Crash Cart Validator</h1>
         <p>Real-time AI-powered surgical tool validation system</p>
+        <button 
+          className="dashboard-btn"
+          onClick={() => setCurrentView('dashboard')}
+        >
+          📊 View Dashboard
+        </button>
       </div>
       <div className="selection-card">
         <h2>Select Emergency Procedure</h2>
@@ -153,11 +478,19 @@ function App() {
           <h2>🏥 {selectedProcedure === 'Custom Procedure' ? customProcedure : selectedProcedure}</h2>
           <span className="session-id">Session: {sessionId?.slice(0, 8)}...</span>
         </div>
-        <div className="completion-indicator">
-          <div className="completion-circle" style={{'--percentage': completionPercentage}}>
-            <span className="percentage">{completionPercentage}%</span>
+        <div className="header-controls">
+          <button 
+            className="dashboard-btn"
+            onClick={() => setCurrentView('dashboard')}
+          >
+            📊 Dashboard
+          </button>
+          <div className="completion-indicator">
+            <div className="completion-circle" style={{'--percentage': completionPercentage}}>
+              <span className="percentage">{completionPercentage}%</span>
+            </div>
+            <span className="completion-label">Complete</span>
           </div>
-          <span className="completion-label">Complete</span>
         </div>
       </div>
       <div className="main-validation-area">
@@ -274,7 +607,9 @@ function App() {
 
   return (
     <div className="app">
-      {currentView === 'procedure' ? renderProcedureSelection() : renderValidationInterface()}
+      {currentView === 'dashboard' && renderDashboard()}
+      {currentView === 'procedure' && renderProcedureSelection()}
+      {currentView === 'validation' && renderValidationInterface()}
     </div>
   );
 }

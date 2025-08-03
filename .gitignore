@@ -12,11 +12,12 @@ CLIP/best_surgical_tool_clip.pth
 video_clip_results/
 
 .env
+sam_vit_h_4b8939.pth
 .env.local
 .env.development.local
 .env.test.local
 .env.production.local
-
+detr_output_smoothed/
 # Python
 __pycache__/
 *.py[cod]

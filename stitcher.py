@@ -3,7 +3,7 @@ import os
 from natsort import natsorted
 
 # Settings
-image_folder = 'video_clip_results/frames_with_boxes'        # Folder containing .jpg files
+image_folder = 'detr_output_smoothed/overlays'        # Folder containing .jpg files
 output_file = 'output.mp4'     # Output video file
 fps = 10                       # Frames per second
 
