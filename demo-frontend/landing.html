@@ -62,6 +62,23 @@
             from, to { border-color: transparent }
             50% { border-color: var(--surgiscan-accent); }
         }
+
+        /* Carousel word animation */
+        #carousel-word {
+            display: inline-block;
+            min-width: 120px; /* Ensure consistent width */
+            text-align: left;
+        }
+
+        .carousel-fade {
+            animation: carouselFade 0.5s ease-in-out;
+        }
+
+        @keyframes carouselFade {
+            0% { opacity: 1; transform: translateY(0); }
+            50% { opacity: 0; transform: translateY(-10px); }
+            100% { opacity: 1; transform: translateY(0); }
+        }
     </style>
 </head>
 <body class="bg-dark-bg text-dark-text">
@@ -89,10 +106,10 @@
         <div class="absolute inset-0 bg-cover bg-center" style="background-image: url('backtable_landing.png');">
             <div class="absolute inset-0 bg-dark-bg opacity-70"></div> <!-- Dark overlay for text readability -->
         </div>
-        <div class="relative z-10 p-4">
+        <div class="relative z-10 p-4" style="margin-top: -2rem;">
             <div class="typewriter">
                 <h1 class="text-4xl md:text-6xl font-extrabold text-white leading-tight mb-4">
-                    Real-Time Surgical <span class="text-surgiscan-accent">BACK TABLE</span> Validation
+                    Real-Time <span id="carousel-word">Surgical</span> <span class="text-surgiscan-accent">BACK TABLE</span> Validation
                 </h1>
             </div>
             <p class="text-lg md:text-xl text-dark-text mb-8 inter-font">
@@ -238,7 +255,7 @@
 
     <!-- Footer -->
     <footer class="bg-dark-card p-8 text-center text-dark-text border-t border-dark-border inter-font">
-        <p>&copy; 2024 SurgiScan. All rights reserved.</p>
+        <p>&copy; 2025 SurgiScan. All rights reserved.</p>
         <p class="mt-2">Built with precision and innovation.</p>
     </footer>
 
@@ -259,7 +276,32 @@
                 textElement.classList.add('typewriter');
                 textElement.innerHTML = textToType; // Set content for animation
             }, 100); // Small delay to ensure re-animation
+
+            // Start carousel animation after typing animation completes
+            setTimeout(() => {
+                startCarouselAnimation();
+            }, 4000); // Wait for typing animation to complete
         });
+
+        // Carousel animation function
+        function startCarouselAnimation() {
+            const carouselElement = document.getElementById('carousel-word');
+            const words = ['Surgical', 'Agentic', 'CV', 'Semantic'];
+            let currentIndex = 0;
+
+            function updateWord() {
+                carouselElement.classList.add('carousel-fade');
+                
+                setTimeout(() => {
+                    currentIndex = (currentIndex + 1) % words.length;
+                    carouselElement.textContent = words[currentIndex];
+                    carouselElement.classList.remove('carousel-fade');
+                }, 250); // Half of the animation duration
+            }
+
+            // Start the carousel cycle
+            setInterval(updateWord, 2000); // Change word every 2 seconds
+        }
     </script>
 </body>
 </html> 
