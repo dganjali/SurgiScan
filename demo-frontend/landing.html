@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SurgiScan - Real-Time Surgical Back Table Validation</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --surgiscan: #007bff;
+            --surgiscan-dark: #0056b3;
+            --surgiscan-light: #66aaff;
+            --surgiscan-accent: #00c4ff; /* Cyborg-ish blue */
+            --dark-bg: #1a1a2e;
+            --dark-card: #16213e;
+            --dark-surface: #0f3460;
+            --dark-text: #e0e0e0;
+            --dark-border: #0a1128;
+        }
+        body {
+            font-family: 'Space Mono', monospace; /* Sharper, modern, techy font */
+            background-color: var(--dark-bg);
+            color: var(--dark-text);
+        }
+        .inter-font {
+            font-family: 'Inter', sans-serif;
+        }
+        .gradient-bg {
+            background: linear-gradient(135deg, var(--surgiscan-dark) 0%, var(--surgiscan) 100%);
+        }
+        .text-surgiscan { color: var(--surgiscan); }
+        .text-surgiscan-dark { color: var(--surgiscan-dark); }
+        .text-surgiscan-light { color: var(--surgiscan-light); }
+        .text-surgiscan-accent { color: var(--surgiscan-accent); } /* For BACK TABLE */
+        .bg-dark-bg { background-color: var(--dark-bg); }
+        .bg-dark-card { background-color: var(--dark-card); }
+        .bg-dark-surface { background-color: var(--dark-surface); }
+        .text-dark-text { color: var(--dark-text); }
+        .border-dark-border { border-color: var(--dark-border); }
+
+        /* Typing animation CSS */
+        .typewriter h1 {
+            overflow: hidden; /* Ensures the content is not revealed until the animation */
+            border-right: .15em solid var(--surgiscan-accent); /* The typwriter cursor */
+            white-space: nowrap; /* Keeps the content on a single line */
+            margin: 0 auto; /* Gives that scrolling effect as the typing happens */
+            letter-spacing: .05em; /* Adjust as needed */
+            animation:
+                typing 3.5s steps(40, end) forwards,
+                blink-caret .75s step-end infinite;
+        }
+
+        /* The typing effect */
+        @keyframes typing {
+            from { width: 0 }
+            to { width: 100% }
+        }
+
+        /* The typewriter cursor effect */
+        @keyframes blink-caret {
+            from, to { border-color: transparent }
+            50% { border-color: var(--surgiscan-accent); }
+        }
+    </style>
+</head>
+<body class="bg-dark-bg text-dark-text">
+
+    <!-- Navigation Bar -->
+    <nav class="bg-dark-card p-4 shadow-lg">
+        <div class="container mx-auto flex justify-between items-center">
+            <div class="flex items-center space-x-4">
+                <img src="surgiscan_slogo2.png" alt="SurgiScan Logo" class="h-10"> <!-- Logo added here -->
+                <a href="#" class="text-2xl font-bold text-surgiscan-light inter-font">SurgiScan</a>
+            </div>
+            <div class="hidden md:flex space-x-6 inter-font">
+                <a href="#problem" class="hover:text-surgiscan-accent transition duration-300">Problem</a>
+                <a href="#solution" class="hover:text-surgiscan-accent transition duration-300">Solution</a>
+                <a href="#how-it-works" class="hover:text-surgiscan-accent transition duration-300">How It Works</a>
+                <a href="#impact" class="hover:text-surgiscan-accent transition duration-300">Impact</a>
+                <a href="#pipeline" class="hover:text-surgiscan-accent transition duration-300">Pipeline</a>
+            </div>
+            <a href="index.html" class="bg-surgiscan hover:bg-surgiscan-dark text-white font-bold py-2 px-6 rounded-full transition duration-300 shadow-lg inter-font">Test It Out</a>
+        </div>
+    </nav>
+
+    <!-- Hero Section with Banner Image -->
+    <header class="relative h-[60vh] md:h-[70vh] flex items-center justify-center text-center overflow-hidden">
+        <div class="absolute inset-0 bg-cover bg-center" style="background-image: url('backtable_landing.png');">
+            <div class="absolute inset-0 bg-dark-bg opacity-70"></div> <!-- Dark overlay for text readability -->
+        </div>
+        <div class="relative z-10 p-4">
+            <div class="typewriter">
+                <h1 class="text-4xl md:text-6xl font-extrabold text-white leading-tight mb-4">
+                    Real-Time Surgical <span class="text-surgiscan-accent">BACK TABLE</span> Validation
+                </h1>
+            </div>
+            <p class="text-lg md:text-xl text-dark-text mb-8 inter-font">
+                Revolutionizing surgical readiness by reducing setup errors by 60-80%.
+            </p>
+            <div class="space-x-4">
+                <a href="index.html" class="bg-surgiscan hover:bg-surgiscan-dark text-white font-bold py-3 px-8 rounded-full transition duration-300 shadow-lg text-lg inter-font">Get Started</a>
+                <a href="#how-it-works" class="border border-surgiscan text-surgiscan hover:bg-surgiscan hover:text-white font-bold py-3 px-8 rounded-full transition duration-300 text-lg inter-font">Learn More</a>
+            </div>
+        </div>
+    </header>
+
+    <main class="container mx-auto px-4 py-16">
+
+        <!-- Problem Section -->
+        <section id="problem" class="mb-20">
+            <h2 class="text-4xl font-bold text-surgiscan-light mb-8 text-center inter-font">The Problem</h2>
+            <div class="bg-dark-card p-8 rounded-lg shadow-xl border border-dark-border">
+                <p class="text-lg leading-relaxed mb-4">
+                    Back tables are sterile workspaces used in operating rooms to organize surgical instruments prior to and during a procedure. Each surgery demands a highly specific and standardized layout, yet mistakes in back table setup remain common.
+                </p>
+                <p class="text-lg leading-relaxed mb-4">
+                    A study in BMJ Quality & Safety (2019) found that setup errors account for up to 23% of intraoperative delays, directly impacting patient safety and surgical outcomes. Manual validation is time-consuming, dependent on experience, and often undocumented.
+                </p>
+            </div>
+        </section>
+
+        <!-- Solution Section -->
+        <section id="solution" class="mb-20">
+            <h2 class="text-4xl font-bold text-surgiscan-light mb-8 text-center inter-font">The Solution</h2>
+            <div class="bg-dark-card p-8 rounded-lg shadow-xl border border-dark-border">
+                <p class="text-lg leading-relaxed mb-4">
+                    A computer vision-powered, head-mounted real-time back table setup validator that compares visual inputs with procedure-specific layouts and instrument lists in seconds — not minutes.
+                </p>
+            </div>
+        </section>
+
+        <!-- How It Works Section -->
+        <section id="how-it-works" class="mb-20">
+            <h2 class="text-4xl font-bold text-surgiscan-light mb-8 text-center inter-font">How It Works</h2>
+            <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+                <div class="bg-dark-card p-6 rounded-lg shadow-xl border border-dark-border">
+                    <h3 class="text-2xl font-semibold text-surgiscan-accent mb-4 inter-font">1. Procedure Selection</h3>
+                    <p class="text-lg leading-relaxed">Clinician or scrub tech selects the planned surgical procedure (e.g., laparoscopic cholecystectomy).</p>
+                </div>
+                <div class="bg-dark-card p-6 rounded-lg shadow-xl border border-dark-border">
+                    <h3 class="text-2xl font-semibold text-surgiscan-accent mb-4 inter-font">2. Layout Generation</h3>
+                    <p class="text-lg leading-relaxed">Our system scrapes clinical resources and OR prep protocols to generate a tailored list of required tools and a visual layout for the back table.</p>
+                </div>
+                <div class="bg-dark-card p-6 rounded-lg shadow-xl border border-dark-border">
+                    <h3 class="text-2xl font-semibold text-surgiscan-accent mb-4 inter-font">3. Real-Time Scan</h3>
+                    <p class="text-lg leading-relaxed">Using a wearable camera (e.g., mounted on glasses or forehead), the scrub nurse scans the setup.</p>
+                </div>
+                <div class="bg-dark-card p-6 rounded-lg shadow-xl border border-dark-border">
+                    <h3 class="text-2xl font-semibold text-surgiscan-accent mb-4 inter-font">4. Instrument Identification</h3>
+                    <p class="text-lg leading-relaxed">Segmentation models isolate each item on the table, which are then sent to the Google Lens API for identification.</p>
+                </div>
+                <div class="bg-dark-card p-6 rounded-lg shadow-xl border border-dark-border">
+                    <h3 class="text-2xl font-semibold text-surgiscan-accent mb-4 inter-font">5. Cross-Referencing</h3>
+                    <p class="text-lg leading-relaxed">The system cross-references detected tools against the required list and ideal layout.</p>
+                </div>
+                <div class="bg-dark-card p-6 rounded-lg shadow-xl border border-dark-border">
+                    <h3 class="text-2xl font-semibold text-surgiscan-accent mb-4 inter-font">6. Instant Feedback</h3>
+                    <p class="text-lg leading-relaxed">Real-time feedback is displayed: missing instruments, extra items, or incorrect placements.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Impact Section -->
+        <section id="impact" class="mb-20">
+            <h2 class="text-4xl font-bold text-surgiscan-light mb-8 text-center inter-font">Our Impact</h2>
+            <div class="grid md:grid-cols-2 gap-8">
+                <div class="bg-dark-card p-6 rounded-lg shadow-xl border border-dark-border flex items-start space-x-4">
+                    <span class="text-surgiscan-accent text-3xl">✅</span>
+                    <p class="text-lg leading-relaxed">Speeds up back table setup verification by 60–80%</p>
+                </div>
+                <div class="bg-dark-card p-6 rounded-lg shadow-xl border border-dark-border flex items-start space-x-4">
+                    <span class="text-surgiscan-accent text-3xl">✅</span>
+                    <p class="text-lg leading-relaxed">Minimizes intraoperative delays due to setup errors</p>
+                </div>
+                <div class="bg-dark-card p-6 rounded-lg shadow-xl border border-dark-border flex items-start space-x-4">
+                    <span class="text-surgiscan-accent text-3xl">✅</span>
+                    <p class="text-lg leading-relaxed">Reduces surgical site infection risk via validated sterile fields</p>
+                </div>
+                <div class="bg-dark-card p-6 rounded-lg shadow-xl border border-dark-border flex items-start space-x-4">
+                    <span class="text-surgiscan-accent text-3xl">✅</span>
+                    <p class="text-lg leading-relaxed">Improves training for new scrub techs with live feedback</p>
+                </div>
+                <div class="bg-dark-card p-6 rounded-lg shadow-xl border border-dark-border flex items-start space-x-4">
+                    <span class="text-surgiscan-accent text-3xl">✅</span>
+                    <p class="text-lg leading-relaxed">Adaptable to various specialties and surgical workflows</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Final Pipeline Section -->
+        <section id="pipeline" class="mb-20">
+            <h2 class="text-4xl font-bold text-surgiscan-light mb-8 text-center inter-font">Final Pipeline</h2>
+            <div class="bg-dark-card p-8 rounded-lg shadow-xl border border-dark-border">
+                <h3 class="text-3xl font-semibold text-surgiscan-accent mb-4 inter-font">Goal: Seamlessly validate surgical back table setups to ensure procedure readiness and sterility</h3>
+
+                <div class="mb-8">
+                    <h4 class="text-2xl font-semibold text-surgiscan-light mb-2 inter-font">User Interaction Flow:</h4>
+                    <ul class="list-disc list-inside text-lg leading-relaxed space-y-2">
+                        <li>User inputs planned surgery or procedure.</li>
+                        <li>System scrapes online protocols and databases (e.g., AORN, OR guidelines, textbooks) to generate a visual and itemized back table layout.</li>
+                        <li>User performs scan of back table using a head-mounted camera.</li>
+                        <li>Video is segmented frame-by-frame to isolate individual tools and containers.</li>
+                        <li>Each segmented image is sent through the Google Lens API to identify the instrument.</li>
+                        <li>Items are grouped, counted, and listed.</li>
+                        <li>List is compared against required setup (including optional instruments).</li>
+                        <li>Dashboard shows visual checklist, alerts missing or extra tools, and saves reports for documentation.</li>
+                    </ul>
+                </div>
+
+                <div class="mb-8">
+                    <h4 class="text-2xl font-semibold text-surgiscan-light mb-2 inter-font">Semantic Image Search w/ OpenAI CLIP + Embedding Search:</h4>
+                    <ul class="list-disc list-inside text-lg leading-relaxed space-y-2">
+                        <li>Input: Folder of segmented, cropped instrument images</li>
+                        <li>Output: Identified object name + quantity</li>
+                        <li>Post-processing: Aggregate duplicate detections, sort into categories (e.g., clamps, retractors)</li>
+                    </ul>
+                </div>
+
+                <div>
+                    <h4 class="text-2xl font-semibold text-surgiscan-light mb-2 inter-font">MCP Server (Agentic) for Scraping:</h4>
+                    <ul class="list-disc list-inside text-lg leading-relaxed space-y-2">
+                        <li>Input: Selected surgical procedure</li>
+                        <li>Action: Use agentic automation to pull data from surgical prep guidelines, institutional protocols, and trusted medical repositories</li>
+                        <li>Output:
+                            <ul class="list-circle list-inside ml-4 space-y-1">
+                                <li>Instrument list (by type and brand)</li>
+                                <li>Layout guides or reference images (if available)</li>
+                                <li>Notes on optional or surgeon-specific preferences</li>
+                            </ul>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-dark-card p-8 text-center text-dark-text border-t border-dark-border inter-font">
+        <p>&copy; 2024 SurgiScan. All rights reserved.</p>
+        <p class="mt-2">Built with precision and innovation.</p>
+    </footer>
+
+    <script>
+        // Typing animation for the hero title
+        document.addEventListener('DOMContentLoaded', function() {
+            const textElement = document.querySelector('.typewriter h1');
+            const originalText = "Real-Time Surgical BACK TABLE Validation";
+            const backTableSpan = '<span class="text-surgiscan-accent">BACK TABLE</span>';
+            const parts = originalText.split('BACK TABLE');
+            const textToType = parts[0] + backTableSpan + parts[1];
+
+            // Remove the animation classes initially to re-trigger
+            textElement.classList.remove('typewriter');
+            textElement.innerHTML = ''; // Clear content
+
+            setTimeout(() => {
+                textElement.classList.add('typewriter');
+                textElement.innerHTML = textToType; // Set content for animation
+            }, 100); // Small delay to ensure re-animation
+        });
+    </script>
+</body>
+</html> 
